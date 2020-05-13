@@ -22,9 +22,12 @@ ftp_control_addr = ("10.100.102.15", 21)
 def close_program(files_window):
     files_window.destroy()
     tmp_folder_path = os.path.join(os.path.realpath('.'), 'tmp')
-    for filename in os.listdir(tmp_folder_path):
-        tmp_file_path = os.path.join(tmp_folder_path, filename)
-        os.unlink(tmp_file_path)
+    try:
+        for filename in os.listdir(tmp_folder_path):
+            tmp_file_path = os.path.join(tmp_folder_path, filename)
+            os.unlink(tmp_file_path)
+    except:
+        pass
     sys.exit()
 
 

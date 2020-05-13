@@ -11,9 +11,6 @@ class NotImplemented(FTPException):
         self.value = '502 not implemented'
         self.errno = 502
 
-    def __str__(self):
-        return self.value
-
 
 class NeedSessionID(FTPException):
     '''
@@ -24,9 +21,6 @@ class NeedSessionID(FTPException):
     def __init__(self):
         self.value = '332 need session id as argument, please specify command again with SESSION parameter'
         self.errno = 332
-
-    def __str__(self):
-        return self.value
 
 
 class InvalidSessionID(FTPException):
@@ -39,8 +33,6 @@ class InvalidSessionID(FTPException):
         self.value = '430 Invalid session id, please try again with the correct session id'
         self.errno = 430
 
-    def __str__(self):
-        return self.value
 
 class FileAlreadyExists(FTPException):
     '''
@@ -49,10 +41,6 @@ class FileAlreadyExists(FTPException):
     def __init__(self):
         self.value = '505 File or directory already exists on this directory'
         self.errno = 505
-
-    def __str__(self):
-        return self.value
-
 
 
 class PermissionDenied(FTPException):
@@ -63,5 +51,20 @@ class PermissionDenied(FTPException):
         self.value = '550 permission denied'
         self.errno = 550
 
-    def __str__(self):
-        return self.value
+
+class FileDoesNotExists(FTPException):
+    '''
+    File does not exists on serverl.
+    '''
+    def __init__(self):
+        self.value = '550 File or directory does not exists'
+        self.errno = 550
+
+
+class InternalError(FTPException):
+    '''
+    Unknown error.
+    '''
+    def __init__(self):
+        self.value = '500 Internal error'
+        self.errno = 500

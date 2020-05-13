@@ -119,3 +119,5 @@ class UIOperations(object):
         print error_msg
         if error_msg.startswith('2'): #  2xx errno is success
             self.refresh()
+            return True
+        return False

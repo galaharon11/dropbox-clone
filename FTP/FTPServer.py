@@ -3,80 +3,14 @@ import threading
 from random import randint
 from Queue import Queue
 import os
-import traceback
 from shutil import rmtree
 
 import FTPDataOperations
+import FTPDatabaseOperations
 import FTPExceptions
 
 
 class FTPServer(threading.Thread):
-    def send_file(self, data_socket, file_path, user_id, group=''):
-        file = None
-        try:
-            if group == 'SHARED':
-                files_shared_with_user = self.get_all_files_associated_with_user(user_id,
-                                        permission_filter=1, reverse_filter=True)
-                for shared_file in files_shared_with_user:
-                    if os.path.basename(file_path) == os.path.basename(shared_file):
-                        abs_file_path = shared_file
-            else:
-                dir_path = os.path.join(self.path_to_files, str(user_id))
-                abs_file_path = os.path.join(dir_path, file_path)
-
-            if not group:
-                if not os.path.exists(dir_path):
-                    raise IOError
-
-            print abs_file_path
-            if not group:
-                if not self.check_permissions(abs_file_path, user_id): # FIXME: change to real permissions
-                    raise FTPExceptions.PermissionDenied
-
-            file = open(abs_file_path, 'rb')
-            while True:
-                file_data = file.read()
-                if file_data:
-                    data_socket.send(file_data)
-                else:
-                    file.close()
-                    data_socket.close()
-                    return abs_file_path
-
-        except IOError:
-            print "IOERROR"
-            file.close()
-            data_socket.close()
-            return ''
-
-    def recieve_file(self, data_socket, file_path, user_id):
-        # TODO: Check if file name already in server, and alert client
-        file = None
-        try:
-            dir_path = os.path.join(self.path_to_files, str(user_id))
-            if not os.path.exists(dir_path):
-                os.mkdir(dir_path)
-
-            abs_path = os.path.join(dir_path, file_path)
-            if os.path.exists(abs_path):
-                raise FTPExceptions.FileAlreadyExists
-
-            file = open(abs_path, 'wb')
-            while True:
-                file_data = data_socket.recv(1024)
-                if file_data:
-                    file.write(file_data)
-                else:
-                    file.close()
-                    data_socket.close()
-                    return abs_path
-
-        except IOError:
-            print "IOERROR"
-            file.close()
-            data_socket.close()
-            return ''
-
     def add_session_id(self, user_id):
         # Session id should be as random as possible, and it should be a long integer (at least 128 bit),
         # so hackers wont be able to brute force it.
@@ -98,56 +32,6 @@ class FTPServer(threading.Thread):
         else:
             raise FTPExceptions.InvalidSessionID
 
-    def change_file_path_on_db(self, file_path, new_file_path, permissions=1):
-        cursor = self.server_db.cursor()
-        cursor.execute('''UPDATE files SET file_path=? WHERE file_path=?''', (new_file_path, file_path))
-        self.server_db.commit()
-
-    def add_user_to_file_db(self, file_path, user_name, permissions=0):
-        cursor = self.server_db.cursor()
-        cursor.execute('''SELECT file_id FROM files WHERE file_path=?''', (file_path,))
-        file_id = int(cursor.fetchone()[0])
-        cursor.execute('''SELECT user_id FROM users WHERE username=?''', (user_name,))
-        user_id = int(cursor.fetchone()[0])
-        cursor.execute('''INSERT INTO users_files VALUES (?, ?, ?)''', (user_id, file_id, permissions))
-        self.server_db.commit()
-
-    def add_file_to_db(self, file_path, user_id, is_dir=False, permissions=1):
-        cursor = self.server_db.cursor()
-        cursor.execute('''INSERT INTO files VALUES (null, ?, ?)''', (file_path, is_dir))
-        self.server_db.commit()
-        cursor.execute('''SELECT file_id FROM files WHERE file_path=?''', (file_path,))
-        file_id = int(cursor.fetchone()[0])
-        cursor.execute('''INSERT INTO users_files VALUES (? , ?, ?)''', (user_id, file_id, permissions))
-        self.server_db.commit()
-
-    def remove_file_from_db(self, file_path, user_id, is_dir=False, permissions=1):
-        cursor = self.server_db.cursor()
-        cursor.execute('''SELECT file_id FROM files WHERE file_path=?''', (file_path,))
-        file_id = int(cursor.fetchone()[0])
-        cursor.execute('''DELETE FROM users_files WHERE file_id=?''', (file_id,))
-        cursor.execute('''DELETE FROM files WHERE file_id=?''', (file_id,))
-        self.server_db.commit()
-
-    def get_all_files_associated_with_user(self, user_id, permission_filter=0, reverse_filter=False):
-        '''
-        Get all files associated with user specified by user_id. if permission_filter is non-zero,
-        the function will filter files with the specific permission specified. If reverse_filter is True,
-        the function will return every file that associated with the user that does not contain permission_filter
-        for the user.
-        '''
-        cursor = self.server_db.cursor()
-        cursor.execute('''SELECT file_id, permissions FROM users_files WHERE user_id=?''', (user_id,))
-        queries = set(cursor.fetchall())
-        if permission_filter:
-            filtered = set(filter(lambda query: query[1] == permission_filter, queries))
-            queries = queries - filtered if reverse_filter else queries
-
-        file_ids = [str(q[0]) for q in queries]
-        cursor.execute('''SELECT file_path FROM files WHERE file_id IN (?)''', (','.join(file_ids),))
-
-        return [query[0] for query in cursor.fetchall()]
-
 
     def handle_ftp_data(self, command_queue, complition_queue):
         # Asks OS for a random port
@@ -168,80 +52,23 @@ class FTPServer(threading.Thread):
         data_server_socket.listen(1)
         data_socket, client_addr = data_server_socket.accept()
 
-       # fucntions = {'APPE': FTPDataOperations.append_file,
-        #             'GET' : FTPDataOperations.get_file,
-         #            'LIST': FTPDataOperations.list_files,
-         #            'APPE': FTPDataOperations.append_file}
-
+        fucntions = {'APPE': FTPDataOperations.append_file,
+                     'GET' : FTPDataOperations.get_file,
+                     'LIST': FTPDataOperations.list_files}
 
         while True:
             while command_queue.empty():
                 pass
 
-            abs_file_path = ''
             command = command_queue.get_nowait()
+            operation =  fucntions[command[:command.find(' ')]]
             user_id = int(command[command.find('USERID=') + 7:])
-            if command.startswith('APPE') or command.startswith('GET'):
-                if command.startswith('APPE'):
-                    file_path = command[command.find('APPE ') + 5: command.find(' USERID=')]
-                    try:
-                        abs_file_path = self.recieve_file(data_socket, file_path, str(user_id))
-                        if abs_file_path:
-                            self.add_file_to_db(abs_file_path, str(user_id), permissions=1)
-                    except FTPExceptions.FileAlreadyExists as e:
-                        print e
-                        complition_queue.put_nowait(str(e))
-
-                elif command.startswith('GET'):
-                    params = command[command.find('GET ') + 4: command.find(' USERID=')]
-                    if ' ' in params:
-                        file_path, group = params.split(' ')
-                    else:
-                        file_path, group = params, ''
-                    abs_file_path = self.send_file(data_socket, file_path, user_id, group=group)
-
-                if abs_file_path:
-                    complition_queue.put_nowait("226 Trasfer complete.")
-                else:
-                    complition_queue.put_nowait("500 Internal Error.")  # just a placeholder
-
-            elif command.startswith('LIST'):
-                params = command[command.find('LIST ') + 5: command.find(' USERID=')]
-                if params.count(' ') == 1:
-                    relative_path, group = params.split(' ')
-                else:
-                    relative_path = params
-                    group = ''
-
-                abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
-                if not os.path.exists(abs_path):
-                    if relative_path=='\\':
-                        os.mkdir(abs_path)
-                    else:
-                        complition_queue.put_nowait("550 Directory was not found.")
-
-                if not group:
-                    files_and_dirs_on_dir = map(lambda file_name: os.path.join(abs_path, file_name), os.listdir(abs_path))
-                else:
-                    files_and_dirs_on_dir = self.get_all_files_associated_with_user(user_id,
-                                                 permission_filter=1, reverse_filter=True)
-
-                dirs_on_dir = filter(lambda dir_path: os.path.isdir(dir_path), files_and_dirs_on_dir)
-                files_on_dir = filter(lambda file_path: not os.path.isdir(file_path), files_and_dirs_on_dir)
-                dirs_on_dir = map(lambda dir: os.path.basename(dir), dirs_on_dir)
-                files_on_dir = map(lambda file: os.path.basename(file), files_on_dir)
-
-                data_socket.send(';;;'.join([','.join(files_on_dir), ','.join(dirs_on_dir)]))
-                complition_queue.put_nowait("212 Directory sent Ok.")
-
-    def check_permissions(self, file_path, user_id, permissions=1):  # just owner for now, will need to change this
-        cursor = self.server_db.cursor()
-        cursor.execute('''SELECT file_id FROM files WHERE file_path=?''', (file_path,))
-        file_id = int(cursor.fetchone()[0])
-        cursor.execute('''SELECT user_id, permissions FROM users_files WHERE file_id=?''', (file_id,))
-        user_id_from_db, permissions_from_db = cursor.fetchone()
-        # Return true if permissions and user_id match, will need to change this to support permissions
-        return(int(user_id_from_db) == user_id and int(permissions_from_db) == permissions)
+            params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
+            try:
+                succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
+                complition_queue.put_nowait(succes_code)
+            except FTPExceptions as e:
+                complition_queue.put_nowait(str(e))
 
     def handle_ftp_control(self, clientsock):
         '''
@@ -324,7 +151,7 @@ class FTPServer(threading.Thread):
                     relative_path = command[command.find('DELE ') + 5: command.find(' SESSIONID=')]
                     abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
                     if os.path.exists(abs_path):
-                        self.remove_file_from_db(abs_path, user_id)
+                        FTPDatabaseOperations.remove_file_from_db(abs_path, user_id)
                         os.remove(abs_path)
                         clientsock.send('213 File deleted.')
                     else:
@@ -340,7 +167,7 @@ class FTPServer(threading.Thread):
                     abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
                     new_abs_path = os.path.join(self.path_to_files, str(user_id), new_path[1:])
                     if os.path.exists(abs_path) and not os.path.exists(new_abs_path):
-                        self.change_file_path_on_db(abs_path, new_abs_path)
+                        FTPDatabaseOperations.change_file_path_on_db(self.server_db, abs_path, new_abs_path)
                         os.rename(abs_path, new_abs_path)
                         clientsock.send('213 File name changed.')
                     else:
@@ -354,10 +181,12 @@ class FTPServer(threading.Thread):
                     relative_path, user_name = command[command.find('SHAR ') + 5: command.find(' SESSIONID=')].split(' ')
                     abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
                     if os.path.exists(abs_path):
-                        self.add_user_to_file_db(abs_path, user_name)
-                        clientsock.send('213 File shared successfully.')
+                        if FTPDatabaseOperations.add_user_to_file_db(self.server_db, abs_path, user_name):
+                            clientsock.send('213 File shared successfully.')
+                        else:
+                            raise FTPExceptions.InternalError
                     else:
-                        clientsock.send('550 File is not found.') # FIXME: different error codes
+                        raise FTPExceptions.FileDoesNotExists
                 else:
                     print command
                     raise FTPExceptions.NotImplemented
@@ -365,7 +194,6 @@ class FTPServer(threading.Thread):
                 accept_data_commands = False
 
             except (FTPExceptions.FTPException) as e:
-                traceback.print_exc()
                 clientsock.send(str(e))
             except (ValueError):
                 clientsock.send('501 Syntax error in parameters or arguments')
