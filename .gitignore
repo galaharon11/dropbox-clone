@@ -1,0 +1,6 @@
+clean.bat
+pylama.ini
+TODO
+*.db
+files/
+.vscode/
