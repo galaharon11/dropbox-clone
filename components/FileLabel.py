@@ -4,7 +4,8 @@ from PIL import ImageTk
 import threading
 import random
 import string
-import tkSimpleDialog
+import tkSimpleDialog, tkMessageBox
+
 
 class FileLabel(tk.Label):
     ICON_SIZE = 64
@@ -14,13 +15,21 @@ class FileLabel(tk.Label):
     def share_file(self):
         user_name_to_share_with = tkSimpleDialog.askstring('Enter user name',
             'Please enter the username of the person you want to share this file with', parent=self.file_view_parent)
-        self.ui_operations.share_file_from_current_dir(self.file_name, user_name_to_share_with)
+        if not self.ui_operations.share_file_from_current_dir(self.file_name, user_name_to_share_with):
+            tkMessageBox.showerror(title='Error', message='user {0} does not exists'.format(user_name_to_share_with))
+
 
     def rename_file(self):
         new_name = tkSimpleDialog.askstring('Rename this file',
                              'Please enter the new name of this file', parent=self.file_view_parent)
         if new_name:
             self.ui_operations.rename_file_in_current_path(self.file_name, new_name)
+
+    def start_file(self, tmp_file_path):
+        try:
+            os.startfile(tmp_file_path)
+        except WindowsError:
+            pass
 
     def file_open(self):
         self.file_view_parent.unmark_all_file_labels()
@@ -30,13 +39,13 @@ class FileLabel(tk.Label):
                 tmp_file_name = ''.join(random.choice(string.ascii_lowercase) for i in range(12)) + self.file_extension
                 tmp_dir = os.path.join(os.path.realpath('.'), 'tmp')
                 if not os.path.exists(tmp_dir):
-                    os.mkdir()
+                    os.mkdir(tmp_dir)
 
                 tmp_file_path = os.path.join(tmp_dir, tmp_file_name)
                 open(tmp_file_path, 'w').close()  # Create temp file
                 self.ui_operations.download_from_current_server_path(self.file_name,
                                                                     file_path_on_client=tmp_file_path)
-                threading.Thread(target=os.startfile, args=(tmp_file_path,)).start()
+                threading.Thread(target=self.start_file, args=(tmp_file_path,)).start()
             else:
                 self.ui_operations.change_directory(self.file_name)
 

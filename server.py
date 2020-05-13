@@ -2,8 +2,9 @@ import socket
 import sqlite3 as sqlite
 import threading
 import traceback
+import sys, os
 
-from FTPServer import FTPServer
+from FTP.FTPServer import FTPServer
 
 server_ip = "10.100.102.15"
 PORT = 10054
@@ -145,6 +146,8 @@ def main():
 
 if __name__ == '__main__':
     try:
+        # This line allows modules to import python files within the program
+        sys.path.append(os.path.dirname(sys.path[0]))
         main()
     except KeyboardInterrupt, SystemExit:
         db.close()
