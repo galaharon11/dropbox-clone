@@ -1,4 +1,4 @@
-components/icons/
+components/icons/*
 !components/icons/up.png
 clean.bat
 pylama.ini
