@@ -39,7 +39,7 @@ def get_all_files_associated_with_user(server_db, user_id, permission_filter=0, 
     for the user.
     '''
     cursor = server_db.cursor()
-    cursor.execute('''SELECT file_id, permissions FROM users_files WHERE user_id=?''', (user_id,))  
+    cursor.execute('''SELECT file_id, permissions FROM users_files WHERE user_id=?''', (user_id,))
     queries = set(cursor.fetchall())
     print queries
     if permission_filter:

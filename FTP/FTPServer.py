@@ -3,10 +3,9 @@ import threading
 from random import randint
 from Queue import Queue
 import os
-from shutil import rmtree
 
 import FTPDataOperations
-import FTPDatabaseOperations
+import FTPControlOperations
 import FTPExceptions
 
 
@@ -52,19 +51,20 @@ class FTPServer(threading.Thread):
         data_server_socket.listen(1)
         data_socket, client_addr = data_server_socket.accept()
 
-        fucntions = {'APPE': FTPDataOperations.append_file,
-                     'GET' : FTPDataOperations.get_file,
-                     'LIST': FTPDataOperations.list_files}
+        data_fucntions = {'APPE': FTPDataOperations.append_file,
+                          'GET' : FTPDataOperations.get_file,
+                          'LIST': FTPDataOperations.list_files}
 
         while True:
             while command_queue.empty():
                 pass
 
             command = command_queue.get_nowait()
-            operation =  fucntions[command[:command.find(' ')]]
+            operation =  data_fucntions[command[:command.find(' ')]]
             user_id = int(command[command.find('USERID=') + 7:])
             params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
             try:
+                print params
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
                 complition_queue.put_nowait(succes_code)
             except FTPExceptions as e:
@@ -75,7 +75,16 @@ class FTPServer(threading.Thread):
             Implemnts an FTP passive protocol
         '''
         command_queue, complition_queue = None, None
-        accept_data_commands = False
+
+        control_fucntions = {'APPE': FTPControlOperations.append_file,
+                             'GET' : FTPControlOperations.get_file,
+                             'LIST': FTPControlOperations.list_files,
+                             'MKD' : FTPControlOperations.mkdir,
+                             'RMD' : FTPControlOperations.rmdir,
+                             'DELE': FTPControlOperations.delete_file,
+                             'RNTO': FTPControlOperations.rename_file,
+                             'SHAR': FTPControlOperations.share_file}
+
         while True:
             try:
                 command = clientsock.recv(1024)
@@ -94,104 +103,25 @@ class FTPServer(threading.Thread):
                         pass
                     clientsock.send(complition_queue.get_nowait())
 
-                    accept_data_commands = True
                     continue
-                else:
-                    user_id = self.get_user_id(command)
 
-                if (command.startswith('APPE') or command.startswith('GET')) and accept_data_commands:
-                    # APPE syntax: APPE file_path_on_server SESSION=sessionid
-                    # GET syntax: GET file_path_on_server group SESSION=sessionid
-                    # if group is specified with GET, GET will ignore file_path_on_server
-
-                    command_queue.put_nowait(command[:command.find('SESSIONID=')] + 'USERID=' + str(user_id))
+                user_id = self.get_user_id(command)
+                operation = control_fucntions[command[:command.find(' ')]]
+                params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
+                try:
+                    operation(params, user_id, self.path_to_files, self.server_db, command_queue, complition_queue)
 
                     while complition_queue.empty():
                         pass
+
                     clientsock.send(complition_queue.get_nowait())
 
-                elif command.startswith('LIST') and accept_data_commands:
-                    # LIST command will list every file in dir_path. group is optional parameter and it indicates
-                    # that the server should list files shared by this group. group parameter can be specified
-                    # to "SHARED", this will tell the server to include files associated with the user, that
-                    # he is not their owner (the files shared with the user)
-                    # LIST stntax: LIST dir_path group(optional) SESSION=sessionid
-                    command_queue.put_nowait(command[:command.find('SESSIONID=')] + 'USERID=' + str(user_id))
-                    while complition_queue.empty():
-                        pass
-                    clientsock.send(complition_queue.get_nowait())
+                except FTPExceptions as e:
+                    clientsock.send(str(e))
 
-                elif command.startswith('MKD'):
-                    # MKD stntax: MKD dir_path SESSION=sessionid
-                    relative_path = command[command.find('MKD ') + 4: command.find(' SESSIONID=')]
-                    abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
-                    if os.path.exists(abs_path):
-                        clientsock.send(str(FTPExceptions.FileAlreadyExists))
-                    else:
-                        os.mkdir(abs_path)
-                        clientsock.send('212 Directory created.')
-
-                elif command.startswith('RMD'):
-                    # RMD stntax: RMD dir_path SESSION=sessionid
-                    relative_path = command[command.find('RMD ') + 4: command.find(' SESSIONID=')]
-                    abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
-                    if os.path.exists(abs_path):
-                        for directory in os.walk(abs_path, topdown=False):  # Iterate directory recursively
-                            for file_path in directory[2]:
-                                abs_file_path = os.path.join(directory[0], file_path)
-                                self.remove_file_from_db(abs_file_path, user_id)
-
-                        rmtree(abs_path)  # delete directory recursively
-                        clientsock.send('212 Directory deleted.')
-                    else:
-                        clientsock.send('550 Directory was not found.')
-
-                elif command.startswith('DELE'):
-                    # DELE stntax: DELE file_name SESSION=sessionid
-                    relative_path = command[command.find('DELE ') + 5: command.find(' SESSIONID=')]
-                    abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
-                    if os.path.exists(abs_path):
-                        FTPDatabaseOperations.remove_file_from_db(abs_path, user_id)
-                        os.remove(abs_path)
-                        clientsock.send('213 File deleted.')
-                    else:
-                        clientsock.send('550 File was not found.')
-
-                elif command.startswith('RNTO'):
-                    # On standart ftp servers, to rename a file the client must enter RNFR command
-                    # and RNTO command right after it. On this implementation, the client need to
-                    # enter only RNTO command with 2 parameters.
-                    # RNTO syntax: RNTO path_to_file path_to_new_file SESSION=sessionid
-                    # Example: RNTO \a\b\before.txt \a\b\after.txt
-                    relative_path, new_path = command[command.find('RNTO ') + 5: command.find(' SESSIONID=')].split(' ')
-                    abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
-                    new_abs_path = os.path.join(self.path_to_files, str(user_id), new_path[1:])
-                    if os.path.exists(abs_path) and not os.path.exists(new_abs_path):
-                        FTPDatabaseOperations.change_file_path_on_db(self.server_db, abs_path, new_abs_path)
-                        os.rename(abs_path, new_abs_path)
-                        clientsock.send('213 File name changed.')
-                    else:
-                        clientsock.send('550 File is not found.') # FIXME: different error codes
-
-                elif command.startswith('SHAR'):
-                    # This command is not a valid ftp command. It will tell the server to share a specific file with
-                    # other user, specified by user_name param.
-                    # RNTO syntax: RNTO path_to_file user_name SESSION=sessionid
-                    # Example: RNTO \a\text.txt user123
-                    relative_path, user_name = command[command.find('SHAR ') + 5: command.find(' SESSIONID=')].split(' ')
-                    abs_path = os.path.join(self.path_to_files, str(user_id), relative_path[1:])
-                    if os.path.exists(abs_path):
-                        if FTPDatabaseOperations.add_user_to_file_db(self.server_db, abs_path, user_name):
-                            clientsock.send('213 File shared successfully.')
-                        else:
-                            raise FTPExceptions.InternalError
-                    else:
-                        raise FTPExceptions.FileDoesNotExists
-                else:
+                except KeyError:
                     print command
                     raise FTPExceptions.NotImplemented
-
-                accept_data_commands = False
 
             except (FTPExceptions.FTPException) as e:
                 clientsock.send(str(e))

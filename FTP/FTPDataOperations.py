@@ -110,8 +110,6 @@ def list_files(params, user_id, path_to_files, data_socket, database):
         files_and_dirs_on_dir = FTPDatabaseOperations.get_all_files_associated_with_user(database,
                                 user_id, permission_filter=1, reverse_filter=True)
 
-    print files_and_dirs_on_dir
-
     dirs_on_dir = filter(lambda dir_path: os.path.isdir(dir_path), files_and_dirs_on_dir)
     files_on_dir = filter(lambda file_path: not os.path.isdir(file_path), files_and_dirs_on_dir)
     dirs_on_dir = map(lambda dir: os.path.basename(dir), dirs_on_dir)

@@ -1,3 +1,5 @@
+components/icons/
+!components/icons/up.png
 clean.bat
 pylama.ini
 TODO
@@ -5,4 +7,3 @@ TODO
 FTP/files/
 .vscode/
 tmp/
-components/icons/
