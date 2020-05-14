@@ -44,6 +44,7 @@ class ShareDialog(tk.Toplevel):
 
         self.permission_download = tk.Checkbutton(self, font=text_font, text='Download it',
                                    variable=self.permission_download_var, onvalue=1, offvalue=DOWNLOAD)
+        self.permission_download.select()  # default on
         self.permission_download.grid(row=3, column=0, padx=20, sticky='w')
         self.permission_delete = tk.Checkbutton(self, font=text_font, text='Delete it',
                                  variable=self.permission_delete_var, onvalue=1, offvalue=DELETE)

@@ -74,8 +74,9 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, compil
 def share_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
     """
     This command is not a valid ftp command. It will tell the server to share a specific file with
-    other user, specified by user_name param.
-    RNTO syntax: RNTO path_to_file user_name SESSION=sessionid
+    other user, specified by user_name param. permissions arg is optional and it will indicate the
+    permissions the shared user will have on this file. default permissions is  ()
+    SHAR syntax: SHAR path_to_file user_name permissions(optional) SESSION=sessionid
     Example: RNTO \a\text.txt user123
     """
     relative_path, user_name = params
