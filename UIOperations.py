@@ -44,17 +44,23 @@ class UIOperations(object):
         return self.ftp_control_sock.recv(1024)
 
     def download_from_current_server_path(self, file_name_on_server, file_path_on_client=''):
-        file_path_on_server = os.path.join(self.current_server_path[1:], file_name_on_server)
-        download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
+        file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
+        error_code = download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
                                             self.session_id, self.server_ip, group=self.current_group)
-        return file_path_on_client
+        if error_code.startswith('550'):
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to downlaod this file')
+
 
     def upload_from_current_server_path(self):
-        file_path = tkFileDialog.askopenfilename(parent=self.master_window, title='Select file')
+        file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
         if file_path:
-            upload_file.upload_file_by_path(file_path, self.current_server_path[1:], self.ftp_control_sock,
-                                            self.session_id, self.server_ip)
-            self.refresh()
+            error_msg = upload_file.upload_file_by_path(file_path, self.current_server_path,
+                                    self.ftp_control_sock, self.session_id, self.server_ip)
+            if error_msg.startswith('2'):  # 2xx errno is success
+                self.refresh()
+            elif error_msg.startswith('550'):
+                tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file')
+
 
     def add_directory_from_current_directory(self, dir_name):
         error_msg = self.send_command('MKD', os.path.join(self.current_server_path, dir_name))

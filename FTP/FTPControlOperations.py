@@ -6,13 +6,14 @@ import FTPDatabaseOperations
 from PermissionsConsts import *
 
 def get_file_from_group_and_check_permission(group, relative_path, server_db, user_id,
-                                            permission_filter, path_to_files):
+                                             permission_filter, path_to_files):
     """
     This function will look for user's file in a specific group and will return the file specified by
     relative path only if the user has the permission specified with permission_filter. If group is empty
     string, the funtion will return absolute path to the file specified.
-    If the user does not have the permission oecified with permission_filter, the function will throw
-    FTPExceptions.PermissionDenied exception.
+    If the user does not have the permission specified with permission_filter, the function will throw
+    FTPExceptions.PermissionDenied exception. If permission_filter is 0, the function will not check for
+    permission.
     """
     abs_path = ''
     if group == 'SHARED':
@@ -33,7 +34,15 @@ def append_file(params, user_id, path_to_files, server_db, command_queue, compil
     Add a file to the FTP server.
     command syntax: APPE file_path_on_server SESSIONID=sessionid
     """
-    command_queue.put_nowait(' '.join(['APPE'] + params + ['USERID=' + str(user_id)]))
+    if len(params) == 2:
+        relative_path, group = params
+    else:
+        relative_path, group = params[0], ''
+
+    abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
+                                                        user_id, 0, path_to_files)
+
+    command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
 
 
 def get_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
@@ -42,16 +51,15 @@ def get_file(params, user_id, path_to_files, server_db, command_queue, compilati
     a file associated to a the specied group.
     command syntax: GET file_path_on_server group(optional) SESSIONID=sessionid
     """
-
     if len(params) == 2:
         relative_path, group = params
     else:
         relative_path, group = params[0], ''
 
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
-                                                        user_id, DELETE, path_to_files)
+                                                        user_id, DOWNLOAD, path_to_files)
 
-    command_queue.put_nowait(' '.join(['GET'] + abs_path + ['USERID=' + str(user_id)]))
+    command_queue.put_nowait(' '.join(['GET', abs_path, 'USERID=' + str(user_id)]))
 
 
 def list_files(params, user_id, path_to_files, server_db, command_queue, compilation_queue):

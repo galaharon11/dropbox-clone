@@ -1,3 +1,7 @@
+import socket
+from sys import stdin
+import select
+
 from passive_connect import passive_connect
 
 
@@ -9,17 +13,35 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
     """
     file_to_download_to = open(path_to_store_file, 'wb')
 
+    attemps_counter = 0
     data_sock = passive_connect(control_sock, server_ip)
+    data_sock.settimeout(0.1)
+
     if group:
         control_sock.send(' '.join(['GET', server_path, group, 'SESSIONID=' + str(session_id)]))
     else:
         control_sock.send(' '.join(['GET', server_path, 'SESSIONID=' + str(session_id)]))
     while True:
-        data = data_sock.recv(1024)
-        if not data:
-            break
-        file_to_download_to.write(data)
+        try:
+            data = data_sock.recv(1024)
+            if not data:
+                break
+            file_to_download_to.write(data)
 
-    data_sock.close()
-    file_to_download_to.close()
-    print control_sock.recv(1024)
+        except socket.timeout:
+            attemps_counter += 1
+            read_sockets, write_sockets, error_sockets = select.select([stdin, control_sock], [], [])
+            if control_sock in read_sockets:
+                error = control_sock.read(1024)
+                print error
+                if error.startswith('5'):
+                    data_sock.close()
+                    file_to_download_to.close()
+                    return error
+
+            if attemps_counter == 100:
+                raise IOError
+        finally:
+            data_sock.close()
+            file_to_download_to.close()
+            return control_sock.recv(1024)

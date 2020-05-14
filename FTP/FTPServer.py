@@ -60,6 +60,7 @@ class FTPServer(threading.Thread):
                 pass
 
             command = command_queue.get_nowait()
+            print command
             operation = data_fucntions[command[:command.find(' ')]]
             user_id = int(command[command.find('USERID=') + 7:])
             params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
@@ -70,11 +71,10 @@ class FTPServer(threading.Thread):
                 complition_queue.put_nowait(str(e))
 
     def handle_ftp_control(self, clientsock):
-        '''
-            Implemnts an FTP passive protocol
-        '''
+        """
+        Implemnts an FTP passive protocol
+        """
         command_queue, complition_queue = None, None
-
         control_fucntions = {'APPE': FTPControlOperations.append_file,
                              'GET' : FTPControlOperations.get_file,
                              'LIST': FTPControlOperations.list_files,
@@ -104,7 +104,12 @@ class FTPServer(threading.Thread):
 
                     continue
 
+                # Check if the server has the user's files firectory, create it if not
                 user_id = self.get_user_id(command)
+                dir_path = os.path.join(self.path_to_files, str(user_id))
+                if not os.path.exists(dir_path):
+                    os.mkdir(dir_path)
+
                 operation = control_fucntions[command[:command.find(' ')]]
                 params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
                 operation(params, user_id, self.path_to_files, self.server_db, command_queue, complition_queue)
