@@ -7,12 +7,15 @@ from PermissionsConsts import *
 
 class ShareDialog(tk.Toplevel):
     def button_pressed(self):
-        permissions = self.permission_download_var | self.permission_delete_var | self.permission_rename_var | \
-                      self.permission_edit_var
+        if self.nameEntry.get() == self.ui_operations.user_name:
+            tkMessageBox.showerror(title='Error', message='You cannot a file to yourself')
+            return
+        permissions = self.permission_download_var.get() | self.permission_delete_var.get() |  \
+            self.permission_rename_var.get() | self.permission_edit_var.get() | self.permission_share_var.get()
         permissions |= DIRECTORY if self.is_dir else 0
-        if (not self.ui_operations.share_file_from_current_dir(self.file_name_to_share,
-            self.nameEntry.get(), permissions)):
-            tkMessageBox.showerror(title='Error', message='user {0} does not exists'.format(self.nameEntry.get()))
+        if(self.ui_operations.share_file_from_current_dir(self.file_name_to_share,
+                                   self.nameEntry.get(), permissions)):
+            self.destroy()
 
     def __init__(self, parent, ui_operations, file_name_to_share, is_dir=False):
         tk.Toplevel.__init__(self, parent)
@@ -41,22 +44,31 @@ class ShareDialog(tk.Toplevel):
         self.permission_delete_var = tk.IntVar()
         self.permission_rename_var = tk.IntVar()
         self.permission_edit_var = tk.IntVar()
+        self.permission_share_var = tk.IntVar()
 
         self.permission_download = tk.Checkbutton(self, font=text_font, text='Download it',
-                                   variable=self.permission_download_var, onvalue=1, offvalue=DOWNLOAD)
+                                   variable=self.permission_download_var, onvalue=DOWNLOAD, offvalue=0)
         self.permission_download.select()  # default on
         self.permission_download.grid(row=3, column=0, padx=20, sticky='w')
+
         self.permission_delete = tk.Checkbutton(self, font=text_font, text='Delete it',
-                                 variable=self.permission_delete_var, onvalue=1, offvalue=DELETE)
+                                 variable=self.permission_delete_var, onvalue=DELETE, offvalue=0)
         self.permission_delete.grid(row=4, column=0, padx=20, sticky='w')
+
         self.permission_rename = tk.Checkbutton(self, font=text_font, text='Rename it',
-                                 variable=self.permission_rename_var, onvalue=1, offvalue=RENAME)
+                                 variable=self.permission_rename_var, onvalue=RENAME, offvalue=0)
         self.permission_rename.grid(row=5, column=0, padx=20, sticky='w')
+
+        self.permission_share = tk.Checkbutton(self, font=text_font, text='Share it',
+                                variable=self.permission_share_var, onvalue=SHARE, offvalue=0)
+        self.permission_share.grid(row=6, column=0, padx=20, sticky='w')
+
         self.permission_edit = tk.Checkbutton(self, font=text_font, text='Edit it',
-                               variable=self.permission_edit_var, onvalue=1, offvalue=DIR_EDIT)
+                               variable=self.permission_edit_var, onvalue=DIR_EDIT, offvalue=0)
+        self.permission_rename.grid(row=7, column=0, padx=20, sticky='w')
         if is_dir:
-            self.permission_edit.grid(row=6, column=0, padx=20, sticky='w',
+            self.permission_edit.grid(row=8, column=0, padx=20, sticky='w',
                                     variable=self.permission_download_var)
 
         self.send_button = tk.Button(self, font=text_font, text='share', command=self.button_pressed)
-        self.send_button.grid(row=7, column=0, columnspan=2, pady=(5,15))
+        self.send_button.grid(row=9, column=0, columnspan=2, pady=(5,15))

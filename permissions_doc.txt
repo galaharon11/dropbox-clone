@@ -2,11 +2,12 @@ Permissions are represented by 1 byte
 The bits are big endian:
 
 File+directory permissions:
-    bit 1 (LSB): Owner bit - The user is the owner of this file/directory. Owner has every
-             permission specified in this file and he can set permissions to group/other users.
+    bit 1 (LSB): Owner bit - The user is the owner of this file/directory. Owner will automatically have every
+                             permission specified in this file and he can set permissions to group/other users.
     bit 2: Download bit - The user can donwnload and open this file.
     bit 3: Delete bit - The user can delete this file/directory.
     bit 4: Rename bit - The user can rename this file/directory.
+    bit 5: Share bit - The user can share this file/directory.
 
 Directory permissions:
     bit 6: Directory bit: Indicates that this 'file' is a directory.

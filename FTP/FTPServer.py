@@ -64,7 +64,6 @@ class FTPServer(threading.Thread):
             user_id = int(command[command.find('USERID=') + 7:])
             params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
             try:
-                print params
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
                 complition_queue.put_nowait(succes_code)
             except FTPExceptions as e:

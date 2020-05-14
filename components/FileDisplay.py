@@ -104,9 +104,10 @@ class FileDisplay(tk.Canvas):
         non_dir_labels = filter(lambda l: not l.is_dir, self.marked_labels)
         if non_dir_labels:
             path = tkFileDialog.askdirectory(parent=self.parent, title='Select directory to save files')
-            for file_label in non_dir_labels:
-                self.ui_operations.download_from_current_server_path(file_label.file_name,
-                                    file_path_on_client=os.path.join(path, file_label.file_name))
+            if path:
+                for file_label in non_dir_labels:
+                    self.ui_operations.download_from_current_server_path(file_label.file_name,
+                                        file_path_on_client=os.path.join(path, file_label.file_name))
 
         self.unmark_all_file_labels()
 
