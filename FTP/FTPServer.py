@@ -60,7 +60,7 @@ class FTPServer(threading.Thread):
                 pass
 
             command = command_queue.get_nowait()
-            operation =  data_fucntions[command[:command.find(' ')]]
+            operation = data_fucntions[command[:command.find(' ')]]
             user_id = int(command[command.find('USERID=') + 7:])
             params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
             try:
@@ -108,28 +108,25 @@ class FTPServer(threading.Thread):
                 user_id = self.get_user_id(command)
                 operation = control_fucntions[command[:command.find(' ')]]
                 params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
-                try:
-                    operation(params, user_id, self.path_to_files, self.server_db, command_queue, complition_queue)
+                operation(params, user_id, self.path_to_files, self.server_db, command_queue, complition_queue)
 
-                    while complition_queue.empty():
-                        pass
+                while complition_queue.empty():
+                    pass
 
-                    clientsock.send(complition_queue.get_nowait())
+                clientsock.send(complition_queue.get_nowait())
 
-                except FTPExceptions as e:
-                    clientsock.send(str(e))
-
-                except KeyError:
-                    print command
-                    raise FTPExceptions.NotImplemented
-
-            except (FTPExceptions.FTPException) as e:
+            except FTPExceptions as e:
                 clientsock.send(str(e))
+
+            except KeyError:
+                print command
+                raise FTPExceptions.NotImplemented
+
             except (ValueError):
                 clientsock.send('501 Syntax error in parameters or arguments')
+
             except socket.error as e:
-                if e.errno == 10054:
-                    return
+                return
 
     def handle_new_control_connection(self):
         while True:
