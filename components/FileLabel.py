@@ -4,8 +4,9 @@ from PIL import ImageTk
 import threading
 import random
 import string
-import tkSimpleDialog, tkMessageBox
+import tkSimpleDialog
 
+from ShareDialog import ShareDialog
 
 class FileLabel(tk.Label):
     ICON_SIZE = 64
@@ -13,11 +14,7 @@ class FileLabel(tk.Label):
     number_of_columns = 9
 
     def share_file(self):
-        user_name_to_share_with = tkSimpleDialog.askstring('Enter user name',
-            'Please enter the username of the person you want to share this file with', parent=self.file_view_parent)
-        if not self.ui_operations.share_file_from_current_dir(self.file_name, user_name_to_share_with):
-            tkMessageBox.showerror(title='Error', message='user {0} does not exists'.format(user_name_to_share_with))
-
+        ShareDialog(self.file_view_parent, self.ui_operations, self.file_name, self.is_dir)
 
     def rename_file(self):
         new_name = tkSimpleDialog.askstring('Rename this file',

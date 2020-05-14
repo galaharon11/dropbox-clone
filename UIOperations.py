@@ -1,19 +1,20 @@
-import tkFileDialog
-from internet_operations import upload_file, download_file, list_dir
+import tkFileDialog, tkMessageBox
 import os
+
+from internet_operations import upload_file, download_file, list_dir
 
 
 class UIOperations(object):
-    def __init__(self, master_window, ftp_control_sock, current_server_path, session_id, server_ip):
+    def __init__(self, master_window, ftp_control_sock, current_server_path, session_id, server_ip, user_name):
         self.ftp_control_sock = ftp_control_sock
         self.current_server_path = current_server_path
         self.server_ip = server_ip
         self.master_window = master_window
         self.session_id = session_id
+        self.user_name = user_name
         self.current_group = ''
 
     def set_partitaion(self, group):
-        print group
         if group == 'Shared files':
             group = 'SHARED'
         elif group == 'My files':
@@ -36,40 +37,34 @@ class UIOperations(object):
         Sends a command to the ftp server.
         :returns: the error string received from the server after sending the command.
         '''
+        if self.current_group:
+            params = params + (self.current_group,)
         command = ' '.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
         self.ftp_control_sock.send(command)
         return self.ftp_control_sock.recv(1024)
 
     def download_from_current_server_path(self, file_name_on_server, file_path_on_client=''):
-        if not file_path_on_client:
-            file_path_on_client = tkFileDialog.asksaveasfilename(parent=self.master_window,
-                                initialfile=file_name_on_server ,title='Save file')
-
-        file_path_on_server = os.path.join(self.current_server_path[1:], file_name_on_server)
-        download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
+        file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
+        error_code = download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
                                             self.session_id, self.server_ip, group=self.current_group)
-        return file_path_on_client
+        if error_code.startswith('550'):
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to downlaod this file')
 
-    def download_from_group(self, file_name_on_server, file_path_on_client=''):
-        if not file_path_on_client:
-            file_path_on_client = tkFileDialog.asksaveasfilename(parent=self.master_window,
-                                initialfile=file_name_on_server ,title='Save file')
-
-        file_path_on_server = os.path.join(self.current_server_path[1:], file_name_on_server)
-        download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
-                                            self.session_id, self.server_ip, group=self.current_group)
-        return file_path_on_client
 
     def upload_from_current_server_path(self):
-        file_path = tkFileDialog.askopenfilename(parent=self.master_window, title='Select file')
+        file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
         if file_path:
-            upload_file.upload_file_by_path(file_path, self.current_server_path[1:], self.ftp_control_sock,
-                                            self.session_id, self.server_ip)
-            self.refresh()
+            error_msg = upload_file.upload_file_by_path(file_path, self.current_server_path,
+                                    self.ftp_control_sock, self.session_id, self.server_ip)
+            if error_msg.startswith('2'):  # 2xx errno is success
+                self.refresh()
+            elif error_msg.startswith('550'):
+                tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file')
+
 
     def add_directory_from_current_directory(self, dir_name):
         error_msg = self.send_command('MKD', os.path.join(self.current_server_path, dir_name))
-        if error_msg.startswith('2'): #  2xx errno is success
+        if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
 
     def delete_file_from_current_path(self, name, is_dir):
@@ -79,8 +74,10 @@ class UIOperations(object):
             error_msg = self.send_command('DELE', os.path.join(self.current_server_path, name))
 
         print error_msg
-        if error_msg.startswith('2'): #  2xx errno is success
+        if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
+        elif error_msg.startswith('550'): # 550 is permission denied
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file')
 
     def change_directory(self, directory):
         self.current_server_path = os.path.join(self.current_server_path, directory)
@@ -95,8 +92,10 @@ class UIOperations(object):
         error_msg = self.send_command('RNTO', os.path.join(self.current_server_path, file_name),
                                               os.path.join(self.current_server_path, new_file_name))
         print error_msg
-        if error_msg.startswith('2'): #  2xx errno is success
+        if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
+        elif error_msg.startswith('550'): # 550 is permission denied
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to rename this file')
 
     def update_compenents(self, file_display=None, control_frame=None):
         '''
@@ -113,11 +112,17 @@ class UIOperations(object):
         return list_dir.list_directory_by_path(self.current_server_path, self.session_id,
                                                self.ftp_control_sock, self.server_ip, self.current_group)
 
-
-    def share_file_from_current_dir(self, file_name, user_name):
-        error_msg = self.send_command('SHAR', os.path.join(self.current_server_path, file_name), user_name)
+    def share_file_from_current_dir(self, file_name, user_name, permissions):
+        error_msg = self.send_command('SHAR', os.path.join(self.current_server_path, file_name),
+                                      user_name, str(permissions))
         print error_msg
-        if error_msg.startswith('2'): #  2xx errno is success
+        if error_msg.startswith('2'):  # 2xx errno is success
+            tkMessageBox.showinfo(title='Success', message='File shared successfully')
             self.refresh()
-            return True
+            return True  # success
+        elif error_msg.startswith('550'):  # 550 is permission denied
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to share this file')
+        else:
+            tkMessageBox.showerror(title='Error', message='User {0} does not exists'.format(user_name))
+
         return False
