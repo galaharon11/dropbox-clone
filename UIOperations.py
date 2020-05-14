@@ -1,6 +1,7 @@
 import tkFileDialog
-from internet_operations import upload_file, download_file, list_dir
 import os
+
+from internet_operations import upload_file, download_file, list_dir
 
 
 class UIOperations(object):
@@ -114,8 +115,9 @@ class UIOperations(object):
                                                self.ftp_control_sock, self.server_ip, self.current_group)
 
 
-    def share_file_from_current_dir(self, file_name, user_name):
-        error_msg = self.send_command('SHAR', os.path.join(self.current_server_path, file_name), user_name)
+    def share_file_from_current_dir(self, file_name, user_name, permissions):
+        error_msg = self.send_command('SHAR', os.path.join(self.current_server_path, file_name),
+                                      user_name, permissions)
         print error_msg
         if error_msg.startswith('2'): #  2xx errno is success
             self.refresh()

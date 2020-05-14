@@ -115,11 +115,10 @@ class FTPServer(threading.Thread):
 
                 clientsock.send(complition_queue.get_nowait())
 
-            except FTPExceptions as e:
+            except FTPExceptions.FTPException as e:
                 clientsock.send(str(e))
 
             except KeyError:
-                print command
                 raise FTPExceptions.NotImplemented
 
             except (ValueError):
