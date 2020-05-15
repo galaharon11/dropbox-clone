@@ -101,8 +101,8 @@ class FTPServer(threading.Thread):
                     data_thread.start()
                     while complition_queue.empty():
                         pass
-                    clientsock.send(complition_queue.get_nowait())
 
+                    clientsock.send(complition_queue.get_nowait())
                     continue
 
                 user_id = self.get_user_id(command)
