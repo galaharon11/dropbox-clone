@@ -145,6 +145,9 @@ class UIOperations(object):
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
             tkMessageBox.showerror(title='Error', message='You don\'t have the permission to rename this file')
+        elif error_msg.startswith('505'): # 550 is permission denied
+            tkMessageBox.showerror(title='Error', message='There is already a file with the same name you entered on this '
+                                                          'directory. Please enter a different name')
 
     def update_compenents(self, file_display=None, control_frame=None):
         '''

@@ -113,10 +113,13 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, compil
                                                         user_id, RENAME, path_to_files)
 
     new_abs_path = os.path.join(path_to_files, str(user_id), new_path[1:])
-    if os.path.exists(abs_path) and not os.path.exists(new_abs_path):
-        FTPDatabaseOperations.change_file_path_on_db(server_db, abs_path, new_abs_path)
-        os.rename(abs_path, new_abs_path)
-        compilation_queue.put_nowait('213 File name changed.')
+    if os.path.exists(abs_path):
+        if not os.path.exists(new_abs_path):
+            FTPDatabaseOperations.change_file_path_on_db(server_db, abs_path, new_abs_path)
+            os.rename(abs_path, new_abs_path)
+            compilation_queue.put_nowait('213 File name changed.')
+        else:
+            raise FTPExceptions.FileAlreadyExists
     else:
         raise FTPExceptions.FileDoesNotExists
 
