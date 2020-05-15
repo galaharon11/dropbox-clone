@@ -1,4 +1,8 @@
+from sqlite3 import IntegrityError
+
 from PermissionsConsts import *
+import FTPExceptions
+
 
 def add_user_to_file_db(server_db, file_path, user_name, permissions=0):
     cursor = server_db.cursor()
@@ -22,7 +26,7 @@ def add_file_to_db(server_db, file_path, user_id, is_dir=False, permissions=OWNE
     server_db.commit()
     cursor.execute('''SELECT file_id FROM files WHERE file_path=?''', (file_path,))
     file_id = int(cursor.fetchone()[0])
-    cursor.execute('''INSERT INTO users_files VALUES (? , ?, ?)''', (user_id, file_id, permissions))
+    cursor.execute('''INSERT INTO users_files VALUES (?, ?, ?)''', (user_id, file_id, permissions))
     server_db.commit()
 
 def remove_file_from_db(server_db, file_path, user_id, is_dir=False, permissions=OWNER):
@@ -77,3 +81,34 @@ def change_file_path_on_db(server_db, file_path, new_file_path, permissions=1):
     cursor = server_db.cursor()
     cursor.execute('''UPDATE files SET file_path=? WHERE file_path=?''', (new_file_path, file_path))
     server_db.commit()
+
+
+def create_group(server_db, group_name, user_id):
+    try:
+        cursor = server_db.cursor()
+        cursor.execute('''INSERT INTO groups VALUES (?, ?)''', (group_name,))
+        server_db.commit()
+        cursor.execute('''SELECT group_id FROM groups WHERE group=?''', (group_name,))
+        group_id = int(cursor.fetchone()[0])
+
+        cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, OWNER))
+    except IntegrityError:
+        return False
+    return True
+
+def get_user_groups(server_db, user_id):
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT group_id FROM groups WHERE user_id=?''', (user_id,))
+    group_ids = cursor.fetchall()
+    group_ids = map(str, group_ids)
+    cursor.execute('''SELECT group_name FROM groups WHERE group_id IN ({0})'''.format(','.join(file_ids)))
+    group_names = cursor.fetchall()
+    return list(group_names)
+
+def join_group(server_db, user_id, group_name, permissions=0):
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
+    group_id = int(cursor.fetchone())
+    cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, permissions))
+    group_names = cursor.fetchall()
+    return list(group_names)

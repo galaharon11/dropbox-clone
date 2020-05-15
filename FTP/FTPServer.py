@@ -32,7 +32,7 @@ class FTPServer(threading.Thread):
             raise FTPExceptions.InvalidSessionID
 
 
-    def handle_ftp_data(self, command_queue, complition_queue):
+    def handle_ftp_data(self, command_queue, completion_queue):
         # Asks OS for a random port
         get_random_port_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         get_random_port_socket.bind(('', 0))
@@ -42,7 +42,7 @@ class FTPServer(threading.Thread):
         data_port = get_random_port_socket.getsockname()[1]
         get_random_port_socket.close()
 
-        complition_queue.put_nowait('227 PORT {0}'.format(data_port))
+        completion_queue.put_nowait(' PORT {0}'.format(data_port))
 
         # Create data socket. The data socket will trasfer the files, while the control socket (port 21)
         # will trasfer and recieve commands.
@@ -53,7 +53,7 @@ class FTPServer(threading.Thread):
 
         data_fucntions = {'APPE': FTPDataOperations.append_file,
                           'GET' : FTPDataOperations.get_file,
-                          'LIST': FTPDataOperations.list_files}
+                          'LIST': FTPDataOperations.list_files }
 
         while True:
             while command_queue.empty():
@@ -67,16 +67,16 @@ class FTPServer(threading.Thread):
             try:
                 print params
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
-                complition_queue.put_nowait(succes_code)
+                completion_queue.put_nowait(succes_code)
             except FTPExceptions.FTPException as e:
                 print str(e)
-                complition_queue.put_nowait(str(e))
+                completion_queue.put_nowait(str(e))
 
     def handle_ftp_control(self, clientsock):
         """
         Implemnts an FTP passive protocol
         """
-        command_queue, complition_queue = None, None
+        command_queue, completion_queue = None, None
         control_fucntions = {'APPE': FTPControlOperations.append_file,
                              'GET' : FTPControlOperations.get_file,
                              'LIST': FTPControlOperations.list_files,
@@ -84,7 +84,8 @@ class FTPServer(threading.Thread):
                              'RMD' : FTPControlOperations.rmdir,
                              'DELE': FTPControlOperations.delete_file,
                              'RNTO': FTPControlOperations.rename_file,
-                             'SHAR': FTPControlOperations.share_file}
+                             'SHAR': FTPControlOperations.share_file,
+                             'GROUP': FTPControlOperations.group_operations }
 
         while True:
             try:
@@ -95,15 +96,15 @@ class FTPServer(threading.Thread):
                     command_queue = Queue()
                     # Create a complition queue so control thread will know when the data thread finished
                     # handling a request
-                    complition_queue = Queue()
+                    completion_queue = Queue()
                     data_thread = threading.Thread(target=self.handle_ftp_data,
-                                                   args=(command_queue, complition_queue))
+                                                   args=(command_queue, completion_queue))
                     data_thread.deamon = True
                     data_thread.start()
-                    while complition_queue.empty():
+                    while completion_queue.empty():
                         pass
 
-                    clientsock.send(complition_queue.get_nowait())
+                    clientsock.send(completion_queue.get_nowait())
                     continue
 
                 # Check if the server has the user's files firectory, create it if not
@@ -114,12 +115,12 @@ class FTPServer(threading.Thread):
 
                 operation = control_fucntions[command[:command.find(' ')]]
                 params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
-                operation(params, user_id, self.path_to_files, self.server_db, command_queue, complition_queue)
+                operation(params, user_id, self.path_to_files, self.server_db, command_queue, completion_queue)
 
-                while complition_queue.empty():
+                while completion_queue.empty():
                     pass
 
-                clientsock.send(complition_queue.get_nowait())
+                clientsock.send(completion_queue.get_nowait())
 
             except FTPExceptions.FTPException as e:
                 print 'catched:', str(e)
