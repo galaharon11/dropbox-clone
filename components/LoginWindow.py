@@ -18,7 +18,7 @@ class LoginWindow(tk.Toplevel):
             self.password_entry.delete(0, 'end')
 
         else:
-            self.do_func_when_exit()
+            self.do_func_when_exit(username)
             self.destroy()
 
     def __init__(self, parent, login_server_socket, do_func_when_exit):

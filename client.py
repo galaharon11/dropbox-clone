@@ -53,7 +53,7 @@ def spawn_login_frame(is_register_window=False):
         login_window = LoginWindow(welcome_window, login_sock, create_main_window)
 
 
-def create_main_window():
+def create_main_window(user_name):
     global files_window, control_frame
 
     session_id = login_sock.recv(1024)
@@ -68,7 +68,7 @@ def create_main_window():
     files_window.title('Dropbox')
     files_window.geometry('950x700+50+50')
 
-    ui_operations = UIOperations(files_window, ftp_control_sock, '\\', session_id, ftp_control_addr[0])
+    ui_operations = UIOperations(files_window, ftp_control_sock, '\\', session_id, ftp_control_addr[0], user_name)
 
     default_font = tkFont.nametofont("TkTextFont")
     default_font.configure(size=12)
@@ -110,7 +110,8 @@ def main():
     login_sock.connect(login_server_addr)
 
     widgets_font = tkFont.Font(family="TkTextFont", size=20)
-    login_button = tk.Button(welcome_window, text="Login", font=widgets_font, command=lambda: spawn_login_frame(False))
+    login_button = tk.Button(welcome_window, text="Login", font=widgets_font,
+                            command=lambda: spawn_login_frame(False))
     register_button = tk.Button(welcome_window, text="Create an acount", font=widgets_font,
                                 command=lambda: spawn_login_frame(True))
     login_button.pack(pady=10, padx=10)
