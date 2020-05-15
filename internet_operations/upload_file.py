@@ -1,4 +1,4 @@
-from os import path
+import os
 import tkMessageBox
 import socket
 import select
@@ -7,18 +7,26 @@ from sys import stdin
 from passive_connect import passive_connect
 
 
-def upload_file_by_path(file_path, server_path, control_sock, session_id, server_ip):
-    if not path.exists(file_path):
+def upload_file_by_path(file_path, server_path, control_sock, session_id, server_ip, progressbar, queue):
+    if not os.path.exists(file_path):
         raise IOError
 
     attemps_counter = 0
     data_sock = passive_connect(control_sock, server_ip)
     data_sock.settimeout(0.1)
-    control_sock.send(' '.join(['APPE', path.join(server_path, path.basename(file_path)),
+    control_sock.send(' '.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
                                 'SESSIONID=' + str(session_id)]))
+    file_to_upload = open(file_path, 'rb')
+    byte_counter = 0
+    file_size = os.stat(file_path).st_size
     try:
-        file_to_upload = open(file_path, 'rb')
-        data_sock.send(file_to_upload.read())
+        while byte_counter < file_size:
+            file_to_upload.seek(byte_counter)
+            data = file_to_upload.read(1024)
+            byte_counter += len(data)
+            data_sock.send(data)
+            queue.put_nowait('bytes {0}'.format(byte_counter))
+
     except IOError:
         tkMessageBox.showerror(title='Error', message='The directory you chose already contains a'
                                                       'file with the same name, please choose antoher directory')
@@ -27,15 +35,14 @@ def upload_file_by_path(file_path, server_path, control_sock, session_id, server
         read_sockets, write_sockets, error_sockets = select.select([stdin, control_sock], [], [])
         if control_sock in read_sockets:
             error = control_sock.read(1024)
-            print error
             if error.startswith('5'):
                 data_sock.close()
                 file_to_upload.close()
-                return error
+                queue.put_nowait(error)
 
-        if attemps_counter == 100:
+        if attemps_counter == 1000:
             raise IOError
     finally:
         data_sock.close()
         file_to_upload.close()
-        return control_sock.recv(1024)
+        queue.put_nowait(control_sock.recv(1024))
