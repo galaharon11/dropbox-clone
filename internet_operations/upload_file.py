@@ -25,7 +25,7 @@ def upload_file_by_path(file_path, server_path, control_sock, session_id, server
             data = file_to_upload.read(1024)
             byte_counter += len(data)
             data_sock.send(data)
-            progressbar.set_byte_coutner(byte_counter)
+            queue.put_nowait('bytes {0}'.format(byte_counter))
 
     except IOError:
         tkMessageBox.showerror(title='Error', message='The directory you chose already contains a'

@@ -23,5 +23,3 @@ class ProgressBar(tk.Toplevel):
     def set_byte_coutner(self, byte_counter):
         self.byte_counter = byte_counter
         self.progressbar_val.set(int((self.byte_counter / float(self.file_size) * 100)))
-        if self.byte_counter > self.size:
-            tkMessageBox.showinfo('File has been {0}ed'.format(self.mode))

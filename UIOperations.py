@@ -36,50 +36,72 @@ class UIOperations(object):
             self.master_window.focus_set()
 
     def send_command(self, command_name, *params):
-        '''
+        """
         Sends a command to the ftp server.
         :returns: the error string received from the server after sending the command.
-        '''
+        """
         if self.current_group:
             params = params + (self.current_group,)
         command = ' '.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
         self.ftp_control_sock.send(command)
         return self.ftp_control_sock.recv(1024)
 
+    def destroy_progressbar(self, error_msg):
+        mode = self.progress_bar.mode
+        self.progress_bar.destroy()
+        if error_msg.startswith('2'):  # 2xx errno is success
+            self.refresh()
+            tkMessageBox.showinfo(title='Success', message='File {0}ed successfully'.format(mode))
+
+        elif error_msg.startswith('550'):
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to {0} this file'.format(mode))
+
+    def check_if_thread_finished(self):
+        if not self.msg_queue.empty():
+            msg = self.msg_queue.get_nowait()
+            if msg.startswith('bytes'):
+                self.progress_bar.set_byte_coutner(int(msg[msg.find(' ') + 1:]))
+                self.master_window.after_cancel(self.after_instance)
+                self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+                while not self.msg_queue.empty():
+                    msg = self.msg_queue.get_nowait()
+                    if not msg.startswith('bytes'):
+                        print msg
+                        self.destroy_progressbar(msg)
+                        self.should_destroy_progressbar = True
+                        return
+            else:
+                print msg
+                self.destroy_progressbar(msg)
+                self.should_destroy_progressbar = True
+        if not self.should_destroy_progressbar:
+            self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+
     def download_from_current_server_path(self, file_name_on_server, file_path_on_client=''):
         file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
 
+        self.should_destroy_progressbar = False
         self.msg_queue = Queue.Queue()
         self.progress_bar = ProgressBar(self.master_window, 0, file_name_on_server, mode='download')
-        self.master_window.after(100, self.check_if_thread_finished)
 
-        error_code = download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
-                    self.session_id, self.server_ip,self.progress_bar, self.msg_queue, group=self.current_group)
-        if error_code.startswith('550'):
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to downlaod this file')
+        download_thread = threading.Thread(target=download_file.download_file_by_path, args=(file_path_on_server,
+                                file_path_on_client, self.ftp_control_sock, self.session_id,
+                                self.server_ip, self.progress_bar, self.msg_queue, self.current_group))
+        self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+        download_thread.start()
 
-    def check_if_thread_finished(self):
-        if self.msg_queue.empty():
-            self.master_window.after(100, self.check_if_thread_finished)
-        else:
-            error_msg = self.msg_queue.get_nowait()
-            print error_msg
-            self.progress_bar.destroy()
-            if error_msg.startswith('2'):  # 2xx errno is success
-                self.refresh()
-            elif error_msg.startswith('550'):
-                tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file')
 
     def upload_from_current_server_path(self):
         file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
         if file_path:
+            self.should_destroy_progressbar = False
             self.msg_queue = Queue.Queue()
             self.progress_bar = ProgressBar(self.master_window, os.stat(file_path).st_size,
                                 os.path.basename(file_path), mode='upload')
             upload_thread = threading.Thread(target=upload_file.upload_file_by_path, args=(file_path,
                                 self.current_server_path, self.ftp_control_sock, self.session_id,
                                 self.server_ip, self.progress_bar, self.msg_queue))
-            self.master_window.after(100, self.check_if_thread_finished)
+            self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
             upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):

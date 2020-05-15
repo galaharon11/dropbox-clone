@@ -26,28 +26,30 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
 
     byte_counter = 0
     file_size = int(data_sock.recv(1024))
-
+    print file_size
+    progressbar.update_file_size(file_size)
     while True:
         try:
-            while byte_counter <= file_size:
+            while byte_counter < file_size:
                 data = data_sock.recv(1024)
                 if not data:
                     break
-
-                file_to_download_to.write(data)
+                print byte_counter
                 file_to_download_to.seek(byte_counter)
+                file_to_download_to.write(data)
                 byte_counter += len(data)
-                progressbar.set_byte_coutner(byte_counter)
+                queue.put_nowait('bytes {0}'.format(byte_counter))
 
         except socket.timeout:
             attemps_counter += 1
             read_sockets, write_sockets, error_sockets = select.select([stdin, control_sock], [], [])
             if control_sock in read_sockets:
-                error = control_sock.read(1024)
+                error = control_sock.recv(1024)
                 if error.startswith('5'):
                     data_sock.close()
                     file_to_download_to.close()
                     queue.put_nowait(error)
+                    return
 
             if attemps_counter == 100:
                 raise IOError
@@ -55,3 +57,4 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
             data_sock.close()
             file_to_download_to.close()
             queue.put_nowait(control_sock.recv(1024))
+            return
