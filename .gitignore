@@ -4,7 +4,6 @@ clean.bat
 pylama.ini
 TODO
 *.db
-FTP/files/
+files/
 .vscode/
 tmp/
-try.py

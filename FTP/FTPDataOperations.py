@@ -58,7 +58,9 @@ def append_file(params, user_id, path_to_files, data_socket, database):
     else:
         file_path, group = params[0], ''
 
+    print file_path
     abs_file_path = recieve_file(file_path, data_socket)
+    print abs_file_path
     if abs_file_path:
         FTPDatabaseOperations.add_file_to_db(database, abs_file_path, str(user_id), permissions=1)
 

@@ -39,9 +39,10 @@ def append_file(params, user_id, path_to_files, server_db, command_queue, compil
     else:
         relative_path, group = params[0], ''
 
+    print relative_path
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, 0, path_to_files)
-
+    print abs_path
     command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
 
 
