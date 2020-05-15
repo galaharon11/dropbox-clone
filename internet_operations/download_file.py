@@ -1,11 +1,13 @@
 import socket
 from sys import stdin
 import select
+import os
 
 from passive_connect import passive_connect
 
 
-def download_file_by_path(server_path, path_to_store_file, control_sock, session_id, server_ip, group=''):
+def download_file_by_path(server_path, path_to_store_file, control_sock, session_id, server_ip, progressbar,
+                          queue, group=''):
     """
     Downloads a file in the server by the given server_path. The downloaded file will be saved
     in path_to_store_file path, which sould be a valid path to a file in client's computer.
@@ -21,27 +23,35 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
         control_sock.send(' '.join(['GET', server_path, group, 'SESSIONID=' + str(session_id)]))
     else:
         control_sock.send(' '.join(['GET', server_path, 'SESSIONID=' + str(session_id)]))
+
+    byte_counter = 0
+    file_size = int(data_sock.recv(1024))
+
     while True:
         try:
-            data = data_sock.recv(1024)
-            if not data:
-                break
-            file_to_download_to.write(data)
+            while byte_counter <= file_size:
+                data = data_sock.recv(1024)
+                if not data:
+                    break
+
+                file_to_download_to.write(data)
+                file_to_download_to.seek(byte_counter)
+                byte_counter += len(data)
+                progressbar.set_byte_coutner(byte_counter)
 
         except socket.timeout:
             attemps_counter += 1
             read_sockets, write_sockets, error_sockets = select.select([stdin, control_sock], [], [])
             if control_sock in read_sockets:
                 error = control_sock.read(1024)
-                print error
                 if error.startswith('5'):
                     data_sock.close()
                     file_to_download_to.close()
-                    return error
+                    queue.put_nowait(error)
 
             if attemps_counter == 100:
                 raise IOError
         finally:
             data_sock.close()
             file_to_download_to.close()
-            return control_sock.recv(1024)
+            queue.put_nowait(control_sock.recv(1024))

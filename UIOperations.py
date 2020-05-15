@@ -1,7 +1,10 @@
 import tkFileDialog, tkMessageBox
 import os
+import threading
+import Queue
 
 from internet_operations import upload_file, download_file, list_dir
+from components.ProgressBar import ProgressBar
 
 
 class UIOperations(object):
@@ -45,22 +48,39 @@ class UIOperations(object):
 
     def download_from_current_server_path(self, file_name_on_server, file_path_on_client=''):
         file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
+
+        self.msg_queue = Queue.Queue()
+        self.progress_bar = ProgressBar(self.master_window, 0, file_name_on_server, mode='download')
+        self.master_window.after(100, self.check_if_thread_finished)
+
         error_code = download_file.download_file_by_path(file_path_on_server, file_path_on_client, self.ftp_control_sock,
-                                            self.session_id, self.server_ip, group=self.current_group)
+                    self.session_id, self.server_ip,self.progress_bar, self.msg_queue, group=self.current_group)
         if error_code.startswith('550'):
             tkMessageBox.showerror(title='Error', message='You don\'t have the permission to downlaod this file')
 
-
-    def upload_from_current_server_path(self):
-        file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
-        if file_path:
-            error_msg = upload_file.upload_file_by_path(file_path, self.current_server_path,
-                                    self.ftp_control_sock, self.session_id, self.server_ip)
+    def check_if_thread_finished(self):
+        if self.msg_queue.empty():
+            self.master_window.after(100, self.check_if_thread_finished)
+        else:
+            error_msg = self.msg_queue.get_nowait()
+            print error_msg
+            self.progress_bar.destroy()
             if error_msg.startswith('2'):  # 2xx errno is success
                 self.refresh()
             elif error_msg.startswith('550'):
                 tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file')
 
+    def upload_from_current_server_path(self):
+        file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
+        if file_path:
+            self.msg_queue = Queue.Queue()
+            self.progress_bar = ProgressBar(self.master_window, os.stat(file_path).st_size,
+                                os.path.basename(file_path), mode='upload')
+            upload_thread = threading.Thread(target=upload_file.upload_file_by_path, args=(file_path,
+                                self.current_server_path, self.ftp_control_sock, self.session_id,
+                                self.server_ip, self.progress_bar, self.msg_queue))
+            self.master_window.after(100, self.check_if_thread_finished)
+            upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):
         error_msg = self.send_command('MKD', os.path.join(self.current_server_path, dir_name))

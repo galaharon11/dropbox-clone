@@ -70,6 +70,8 @@ def get_file(params, user_id, path_to_files, data_socket, database):
     else:
         file_path, group = params[0], ''
 
+    data_socket.send(str(os.stat(file_path).st_size))
+    print file_path
     abs_file_path = send_file(file_path, data_socket)
     if not abs_file_path:
         raise FTPExceptions.InternalError
