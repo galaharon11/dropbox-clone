@@ -67,7 +67,8 @@ class FTPServer(threading.Thread):
             try:
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
                 complition_queue.put_nowait(succes_code)
-            except FTPExceptions as e:
+            except FTPExceptions.FTPException as e:
+                print str(e)
                 complition_queue.put_nowait(str(e))
 
     def handle_ftp_control(self, clientsock):
@@ -120,12 +121,13 @@ class FTPServer(threading.Thread):
                 clientsock.send(complition_queue.get_nowait())
 
             except FTPExceptions.FTPException as e:
+                print 'catched:', str(e)
                 clientsock.send(str(e))
 
             except KeyError:
-                raise FTPExceptions.NotImplemented
+                clientsock.send('502 not implemented')
 
-            except (ValueError):
+            except ValueError:
                 clientsock.send('501 Syntax error in parameters or arguments')
 
             except socket.error as e:

@@ -41,8 +41,7 @@ class FileLabel(tk.Label):
                 tmp_file_path = os.path.join(tmp_dir, tmp_file_name)
                 open(tmp_file_path, 'w').close()  # Create temp file
                 self.ui_operations.download_from_current_server_path(self.file_name,
-                                                                    file_path_on_client=tmp_file_path)
-                threading.Thread(target=self.start_file, args=(tmp_file_path,)).start()
+                    file_path_on_client=tmp_file_path, do_func_when_finish=lambda: self.start_file(tmp_file_path))
             else:
                 self.ui_operations.change_directory(self.file_name)
 

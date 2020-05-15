@@ -1,9 +1,21 @@
 import socket
-from sys import stdin
 import select
 import os
 
 from passive_connect import passive_connect
+
+
+def _close_connection(data_sock, file_to_download_to, queue, control_sock, err_msg):
+    print 'close 4'
+    data_sock.close()
+    file_to_download_to.close()
+    if err_msg:
+        queue.put_nowait(err_msg)
+    else:
+        print 'waiting'
+        a = control_sock.recv(1024)
+        print 'control_sock_msg ',a
+        queue.put_nowait(a)
 
 
 def download_file_by_path(server_path, path_to_store_file, control_sock, session_id, server_ip, progressbar,
@@ -25,36 +37,34 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
         control_sock.send(' '.join(['GET', server_path, 'SESSIONID=' + str(session_id)]))
 
     byte_counter = 0
-    file_size = int(data_sock.recv(1024))
-    print file_size
-    progressbar.update_file_size(file_size)
-    while True:
+    err_msg = ''
+    file_size = 1
+    while byte_counter <= file_size:
         try:
-            while byte_counter < file_size:
-                data = data_sock.recv(1024)
-                if not data:
-                    break
-                print byte_counter
-                file_to_download_to.seek(byte_counter)
-                file_to_download_to.write(data)
-                byte_counter += len(data)
-                queue.put_nowait('bytes {0}'.format(byte_counter))
+            if byte_counter == 0:
+                file_size = int(data_sock.recv(1024))
+                print file_size
+                progressbar.update_file_size(file_size)
+
+            data = data_sock.recv(1024)
+            if not data:
+                break
+            file_to_download_to.seek(byte_counter)
+            file_to_download_to.write(data)
+            byte_counter += len(data)
+            queue.put_nowait('bytes {0}'.format(byte_counter))
 
         except socket.timeout:
             attemps_counter += 1
-            read_sockets, write_sockets, error_sockets = select.select([stdin, control_sock], [], [])
+            read_sockets, write_sockets, error_sockets = select.select([control_sock], [], [])
             if control_sock in read_sockets:
                 error = control_sock.recv(1024)
+                err_msg = error
                 if error.startswith('5'):
-                    data_sock.close()
-                    file_to_download_to.close()
-                    queue.put_nowait(error)
+                    _close_connection(data_sock, file_to_download_to, queue, control_sock, err_msg)
                     return
-
             if attemps_counter == 100:
                 raise IOError
-        finally:
-            data_sock.close()
-            file_to_download_to.close()
-            queue.put_nowait(control_sock.recv(1024))
-            return
+
+    print 'close 3'
+    _close_connection(data_sock, file_to_download_to, queue, control_sock, err_msg)

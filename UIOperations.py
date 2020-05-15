@@ -52,9 +52,12 @@ class UIOperations(object):
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
             tkMessageBox.showinfo(title='Success', message='File {0}ed successfully'.format(mode))
-
+            if self.do_func_when_finish:
+                self.do_func_when_finish()
+                self.do_func_when_finish = None
         elif error_msg.startswith('550'):
             tkMessageBox.showerror(title='Error', message='You don\'t have the permission to {0} this file'.format(mode))
+
 
     def check_if_thread_finished(self):
         if not self.msg_queue.empty():
@@ -66,20 +69,19 @@ class UIOperations(object):
                 while not self.msg_queue.empty():
                     msg = self.msg_queue.get_nowait()
                     if not msg.startswith('bytes'):
-                        print msg
                         self.destroy_progressbar(msg)
                         self.should_destroy_progressbar = True
                         return
             else:
-                print msg
                 self.destroy_progressbar(msg)
                 self.should_destroy_progressbar = True
+
         if not self.should_destroy_progressbar:
             self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
 
-    def download_from_current_server_path(self, file_name_on_server, file_path_on_client=''):
+    def download_from_current_server_path(self, file_name_on_server, file_path_on_client='', do_func_when_finish=None):
         file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
-
+        self.do_func_when_finish = do_func_when_finish
         self.should_destroy_progressbar = False
         self.msg_queue = Queue.Queue()
         self.progress_bar = ProgressBar(self.master_window, 0, file_name_on_server, mode='download')
@@ -95,6 +97,7 @@ class UIOperations(object):
         file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
         if file_path:
             self.should_destroy_progressbar = False
+            self.do_func_when_finish = None
             self.msg_queue = Queue.Queue()
             self.progress_bar = ProgressBar(self.master_window, os.stat(file_path).st_size,
                                 os.path.basename(file_path), mode='upload')

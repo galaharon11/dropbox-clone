@@ -86,7 +86,6 @@ def delete_file(params, user_id, path_to_files, server_db, command_queue, compil
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, DELETE, path_to_files)
 
-
     if os.path.exists(abs_path):
         FTPDatabaseOperations.remove_file_from_db(server_db, abs_path, user_id)
         os.remove(abs_path)

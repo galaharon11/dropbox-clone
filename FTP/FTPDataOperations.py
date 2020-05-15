@@ -24,6 +24,7 @@ def recieve_file(abs_file_path, data_socket):
 
     except IOError:
         file.close()
+        data_socket.close()
         raise FTPExceptions.InternalError
 
 
@@ -37,9 +38,11 @@ def send_file(abs_file_path, data_socket):
         file = open(abs_file_path, 'rb')
         while True:
             file_data = file.read()
+            print 'packet'
             if file_data:
                 data_socket.send(file_data)
             else:
+                print 'closing file'
                 file.close()
                 data_socket.close()
                 return abs_file_path
