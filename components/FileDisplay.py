@@ -9,17 +9,24 @@ from FileLabel import FileLabel
 
 
 class FileDisplay(tk.Canvas):
+    def _get_nubmer_of_coluns(self):
+        self.update()
+        return self.winfo_width() // 95
+
     def _add_file_labels(self, file_names, dir_names=[]):
         extensions = set()
+        number_of_columns = self._get_nubmer_of_coluns()
         for dir_name_to_add in dir_names:
             dir_label = FileLabel(self.files_frame, self, dir_name_to_add, self._num_of_files,
                                   self.ui_operations, is_dir=True)
+            dir_label.do_grid(self._num_of_files, number_of_columns)
             extensions.add('directory')
             self.dir_labels.append(dir_label)
             self._num_of_files += 1
 
         for file_name_to_add in file_names:
             file_label = FileLabel(self.files_frame, self, file_name_to_add, self._num_of_files, self.ui_operations)
+            file_label.do_grid(self._num_of_files, number_of_columns)
             extensions.add(file_label.file_extension[1:])
             self.file_labels.append(file_label)
             self._num_of_files += 1
@@ -32,6 +39,17 @@ class FileDisplay(tk.Canvas):
 
         for file_label in self.file_labels:
             file_label.add_image(images[file_label.file_extension[1:]])
+
+    def _chagne_size(self):
+        for x in self.currently_on_screen:
+            x.grid_forget()
+
+        number_of_columns = self._get_nubmer_of_coluns()
+        self._num_of_files = 0
+
+        for file_label in self.currently_on_screen:
+            file_label.do_grid(self._num_of_files, number_of_columns)
+            self._num_of_files += 1
 
     def get_icon_for_extensions(self, path, extensions):
         """
@@ -53,17 +71,18 @@ class FileDisplay(tk.Canvas):
         for x in self.currently_on_screen:
             x.grid_forget()
 
+        number_of_columns = self._get_nubmer_of_coluns()
         self.currently_on_screen = []
         self._num_of_files = 0
 
         dir_labels = filter(lambda x: x.file_name in dir_names, self.dir_labels)
         file_labels = filter(lambda x: x.file_name in file_names, self.file_labels)
         for dir_name_to_add in dir_labels:
-            dir_name_to_add.do_grid(self._num_of_files)
+            dir_name_to_add.do_grid(self._num_of_files, number_of_columns)
             self.currently_on_screen.append(dir_name_to_add)
             self._num_of_files += 1
         for file_name_to_add in file_labels:
-            file_name_to_add.do_grid(self._num_of_files)
+            file_name_to_add.do_grid(self._num_of_files, number_of_columns)
             self.currently_on_screen.append(file_name_to_add)
             self._num_of_files += 1
 
@@ -137,7 +156,7 @@ class FileDisplay(tk.Canvas):
 
     def __init__(self, parent, ui_operations):
         """
-        :param: file_names: list of files to display.
+        file_names: list of files to display.
         """
         tk.Canvas.__init__(self, parent, background='white', borderwidth=0, highlightthickness=0)
         self.files_frame = tk.Frame(self, background='white')
@@ -162,3 +181,4 @@ class FileDisplay(tk.Canvas):
         parent.bind("<KeyRelease-Control_L>", lambda event: self.control_pressed_or_released(False))
 
         self.bind("<Button-1>", lambda event: self.unmark_all_file_labels())
+        self.bind("<Configure>", lambda event: self._chagne_size())

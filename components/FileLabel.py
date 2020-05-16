@@ -9,8 +9,8 @@ import tkSimpleDialog
 from ShareDialog import ShareDialog
 
 class FileLabel(tk.Label):
-    ICON_SIZE = 64
-    MAX_FILENAME_LENGTH = 10
+    ICON_SIZE = 82
+    MAX_FILENAME_LENGTH = 13
     number_of_columns = 9
 
     def share_file(self):
@@ -66,9 +66,9 @@ class FileLabel(tk.Label):
         if(self not in self.file_view_parent.marked_labels):
             self.config(bg='white')
 
-    def do_grid(self, file_number):
-        self.grid(padx=2, pady=5, row=file_number // FileLabel.number_of_columns,
-                  column=file_number % FileLabel.number_of_columns)
+    def do_grid(self, file_number, number_of_columns):
+        self.grid(padx=2, pady=5, row=file_number // number_of_columns,
+                  column=file_number % number_of_columns)
 
     def __init__(self, frame_parent, file_view_parent, file_name, file_number, ui_operations, is_dir=False):
         tk.Label.__init__(self, frame_parent, background='white', compound='top')
@@ -83,7 +83,7 @@ class FileLabel(tk.Label):
             self.file_extension = ''
 
         if(len(file_name) > FileLabel.MAX_FILENAME_LENGTH):
-            self.short_filename = file_name[:FileLabel.MAX_FILENAME_LENGTH] + '...'
+            self.short_filename = file_name[:FileLabel.MAX_FILENAME_LENGTH - 3] + '...'
         else:
             self.short_filename = file_name
 
@@ -109,4 +109,4 @@ class FileLabel(tk.Label):
         self.popup_menu.add_command(label="Delete", command=self.file_view_parent.remove_marked_files)
         self.bind("<Button-3>", lambda event: self.popup_menu_show(event))
 
-        self.do_grid(file_number)
+        #self.do_grid(file_number)

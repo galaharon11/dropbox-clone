@@ -66,7 +66,8 @@ def create_main_window(user_name):
     files_window = tk.Toplevel(welcome_window)
 
     files_window.title('Dropbox')
-    files_window.geometry('950x700+50+50')
+    files_window.geometry('1030x750+50+50')
+    files_window.minsize(930, 500)
 
     ui_operations = UIOperations(files_window, ftp_control_sock, '\\', session_id, ftp_control_addr[0], user_name)
 
