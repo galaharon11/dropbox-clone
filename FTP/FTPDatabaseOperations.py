@@ -20,9 +20,19 @@ def add_user_to_file_db(server_db, file_path, user_name, permissions=0):
     server_db.commit()
     return True
 
-def add_file_to_db(server_db, file_path, user_id, is_dir=False, permissions=OWNER):
+def add_file_to_db(server_db, file_path, user_id, is_dir=False, group='', permissions=OWNER):
     cursor = server_db.cursor()
-    cursor.execute('''INSERT INTO files VALUES (null, ?, ?)''', (file_path, is_dir))
+    if group:
+        print 'group', group
+        group_id = get_group_id_if_user_in_group(server_db, group, int(user_id))
+        print 'id', group_id
+        if group_id:
+            cursor.execute('''INSERT INTO files VALUES (null, ?, ?, ?)''', (file_path, is_dir, group_id))
+        else:
+            raise FTPExceptions.PermissionDenied
+    else:
+        cursor.execute('''INSERT INTO files VALUES (null, ?, ?, null)''', (file_path, is_dir))
+
     server_db.commit()
     cursor.execute('''SELECT file_id FROM files WHERE file_path=?''', (file_path,))
     file_id = int(cursor.fetchone()[0])
@@ -76,12 +86,10 @@ def check_permissions(server_db, file_path, user_id, permission=OWNER):
             return True
     return False
 
-
 def change_file_path_on_db(server_db, file_path, new_file_path, permissions=1):
     cursor = server_db.cursor()
     cursor.execute('''UPDATE files SET file_path=? WHERE file_path=?''', (new_file_path, file_path))
     server_db.commit()
-
 
 def create_group(server_db, group_name, user_id):
     try:
@@ -114,13 +122,28 @@ def get_user_groups(server_db, user_id):
 
 def join_group(server_db, group_name, user_id, permissions=0):
     cursor = server_db.cursor()
-    print 'name', group_name
+
     cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
     group_id = cursor.fetchone()
     if not group_id:
-        print group_id
         return False
     group_id = int(group_id[0])
     cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, permissions))
     server_db.commit()
     return True
+
+def get_group_id_if_user_in_group(server_db, group_name, user_id):
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
+    group_id = cursor.fetchone()
+    if not group_id:
+        print group_name, 'group_name invalid'
+        return False
+    group_id = int(group_id[0])
+    cursor.execute('''SELECT user_id FROM users_groups WHERE group_id=?''', (group_id,))
+    users_in_group = map(lambda x: x[0], cursor.fetchall())
+    if user_id in users_in_group:
+        return group_id
+    else:
+        print group_name, 'user not in this group'
+        return False

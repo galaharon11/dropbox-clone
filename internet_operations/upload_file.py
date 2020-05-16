@@ -16,15 +16,21 @@ def _close_connection(data_sock, file_to_upload, queue, control_sock, err_msg):
         queue.put_nowait(a)
 
 
-def upload_file_by_path(file_path, server_path, control_sock, session_id, server_ip, progressbar, queue):
+def upload_file_by_path(file_path, server_path, control_sock, session_id, server_ip, progressbar, queue, group=''):
     if not os.path.exists(file_path):
         raise IOError
 
     attemps_counter = 0
     data_sock = passive_connect(control_sock, server_ip)
     data_sock.settimeout(0.1)
-    control_sock.send(' '.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
-                                'SESSIONID=' + str(session_id)]))
+
+    if group:
+        control_sock.send(' '.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
+                                    group, 'SESSIONID=' + str(session_id)]))
+    else:
+        control_sock.send(' '.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
+                                    'SESSIONID=' + str(session_id)]))
+
     err_msg = ''
     file_to_upload = open(file_path, 'rb')
     byte_counter = 0

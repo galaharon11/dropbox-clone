@@ -24,7 +24,7 @@ class GroupsView(tk.Listbox):
         for group in self.groups:
             self.insert('end', group)
 
-    def __init__(self, parent, ui_operations, groups=[]):
+    def __init__(self, parent, ui_operations):
         tk.Listbox.__init__(self, parent, background='white', selectmode='single', highlightthickness=0, activestyle='none')
         self.parent = parent
         self.ui_operations = ui_operations
@@ -33,7 +33,7 @@ class GroupsView(tk.Listbox):
         groupview_font = default_font.copy()
         groupview_font.configure(size=14)
         self.configure(font=groupview_font)
-        self.groups = ['My files', 'Shared files'] + groups
+        self.groups = ['My files', 'Shared files'] + self.ui_operations.group_get()
         for group in self.groups:
             self.insert('end', group)
 

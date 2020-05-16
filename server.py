@@ -93,10 +93,10 @@ def create_db():
         db_file.close()
         db = sqlite.connect('server.db', check_same_thread=False)
     except IOError:
+        print "Database does not found, creating it..."
         # file does not exist
         db_file = open('server.db', 'w')
         db_file.close()
-        print "created file"
         db = sqlite.connect('server.db', check_same_thread=False)
         cursor = db.cursor()
         # enable foreign_keys contrain with sqlite
@@ -108,12 +108,22 @@ def create_db():
                         username TEXT UNIQUE NOT NULL,
                         password TEXT NOT NULL)''')
 
+        cursor.execute('''CREATE TABLE groups (
+                        group_id INTEGER PRIMARY KEY NOT NULL,
+                        group_name TEXT UNIQUE NOT NULL )''')
+        db.commit()
+
+        # One to many relationship between files and groups.A file may be assoicated with user.
+        # and not with group, if that is the case group_id will be null.
         cursor.execute('''CREATE TABLE files (
                         file_id INTEGER PRIMARY KEY NOT NULL,
                         file_path TEXT UNIQUE NOT NULL,
-                        is_directory INT1 )''')
+                        is_directory INT1,
+                        group_id INTETGER,
+                        FOREIGN KEY(group_id) REFERENCES groups (group_id) )''')
 
-        # Many to many relationship
+
+        # Many to many relationship between users and files
         cursor.execute('''CREATE TABLE users_files (
                         user_id INTEGER NOT NULL,
                         file_id INTEGER NOT NULL,
@@ -121,11 +131,7 @@ def create_db():
                         FOREIGN KEY(user_id) REFERENCES users (user_id),
                         FOREIGN KEY(file_id) REFERENCES files (file_id) )''')
 
-        cursor.execute('''CREATE TABLE groups (
-                        group_id INTEGER PRIMARY KEY NOT NULL,
-                        group_name TEXT UNIQUE NOT NULL )''')
-
-        # Many to many relationship
+        # Many to many relationship between users and groups
         cursor.execute('''CREATE TABLE users_groups (
                         user_id INTEGER NOT NULL,
                         group_id INTEGER NOT NULL,
@@ -134,6 +140,7 @@ def create_db():
                         FOREIGN KEY(group_id) REFERENCES groups (group_id) )''')
 
         db.commit()
+        print "Database created."
 
 
 def main():

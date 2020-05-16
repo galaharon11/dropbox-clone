@@ -65,7 +65,7 @@ class FTPServer(threading.Thread):
             user_id = int(command[command.find('USERID=') + 7:])
             params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
             try:
-                print params
+                print 'data params', params
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
                 completion_queue.put_nowait(succes_code)
             except FTPExceptions.FTPException as e:
@@ -76,11 +76,6 @@ class FTPServer(threading.Thread):
         """
         Implemnts an FTP passive protocol
         """
-        # Create a command queue to 'share' data between control thread (this thread) to the data thread
-        command_queue = Queue()
-        # Create a complition queue so control thread will know when the data thread finished
-        # handling a request
-        completion_queue = Queue()
 
         control_fucntions = {'APPE': FTPControlOperations.append_file,
                              'GET' : FTPControlOperations.get_file,
@@ -97,6 +92,12 @@ class FTPServer(threading.Thread):
                 command = clientsock.recv(1024)
                 print command
                 if command == 'PASV':
+                    # Create a command queue to 'share' data between control thread (this thread) to the data thread
+                    command_queue = Queue()
+                    # Create a complition queue so control thread will know when the data thread finished
+                    # handling a request
+                    completion_queue = Queue()
+
                     data_thread = threading.Thread(target=self.handle_ftp_data,
                                                    args=(command_queue, completion_queue))
                     data_thread.deamon = True
@@ -115,6 +116,7 @@ class FTPServer(threading.Thread):
 
                 operation = control_fucntions[command[:command.find(' ')]]
                 params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
+                print 'control params', params
                 operation(params, user_id, self.path_to_files, self.server_db, command_queue, completion_queue)
 
                 while completion_queue.empty():

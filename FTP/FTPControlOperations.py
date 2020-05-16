@@ -26,8 +26,19 @@ def get_file_from_group_and_check_permission(group, relative_path, server_db, us
                 abs_path = shared_file
         if not abs_path:
             raise FTPExceptions.PermissionDenied
-    else:
+
+    elif group == '':
+        # File does not associated with a group
         abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+
+    else:
+        group_id = FTPDatabaseOperations.get_group_id_if_user_in_group(server_db, group, user_id)
+        #TODO: check for group permissions
+        if group_id:
+            abs_path = os.path.join(path_to_files, 'g' + str(group_id), relative_path[1:])
+        else:
+            raise FTPExceptions.NoSuchGroup
+
     return abs_path
 
 
@@ -41,11 +52,13 @@ def append_file(params, user_id, path_to_files, server_db, command_queue, comple
     else:
         relative_path, group = params[0], ''
 
-    print relative_path
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, 0, path_to_files)
-    print abs_path
-    command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
+    print 'control: ', abs_path
+    if group:
+        command_queue.put_nowait(' '.join(['APPE', abs_path, group, 'USERID=' + str(user_id)]))
+    else:
+        command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
 
 
 def get_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
@@ -61,8 +74,11 @@ def get_file(params, user_id, path_to_files, server_db, command_queue, completio
 
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, DOWNLOAD, path_to_files)
+    if group:
+        command_queue.put_nowait(' '.join(['GET', abs_path, group, 'USERID=' + str(user_id)]))
+    else:
+        command_queue.put_nowait(' '.join(['GET', abs_path, 'USERID=' + str(user_id)]))
 
-    command_queue.put_nowait(' '.join(['GET', abs_path, 'USERID=' + str(user_id)]))
 
 
 def list_files(params, user_id, path_to_files, server_db, command_queue, completion_queue):
@@ -206,7 +222,7 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
     operations = {'GET':GroupOperations.group_get,
                   'CREATE':GroupOperations.group_create,
                   'JOIN':GroupOperations.group_join }
-    print 'params', params
+
     if len(params) >= 2:
         completion_queue.put_nowait(operations[params[0]](params[1], server_db, user_id, completion_queue))
     else:

@@ -16,7 +16,6 @@ class UIOperations(object):
         self.session_id = session_id
         self.user_name = user_name
         self.current_group = ''
-        self.groups = self.group_get()
 
     def set_partitaion(self, group):
         if group == 'Shared files':
@@ -33,16 +32,17 @@ class UIOperations(object):
         if self.file_display:
             self.file_display.refresh_display()
             self.control_frame.set_path(self.current_server_path.replace('\\','/'))
-            #self.groups_view.refresh()
-            # Sometimes this funtions sets focus for this widget
+            self.control_frame.set_upload_file_button(self.current_group != 'SHARED')
+            # Sometimes this funtions sets focus for other widgets
             self.master_window.focus_set()
 
-    def send_command(self, command_name, *params):
+    def send_command(self, is_group_command, command_name, *params):
         """
         Sends a command to the ftp server.
         :returns: the error string received from the server after sending the command.
         """
-        if self.current_group:
+        if self.current_group and not is_group_command:
+            # Group commands does not accept group parameter.
             params = params + (self.current_group,)
         command = ' '.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
         self.ftp_control_sock.send(command)
@@ -63,7 +63,6 @@ class UIOperations(object):
             tkMessageBox.showerror(title='Error', message='The file you tried to upload already exists on that directry. '
                                                           'Please delete the file on server, change its name or upload'
                                                           'the file on a different directory')
-
 
     def check_if_thread_finished(self):
         if not self.msg_queue.empty():
@@ -109,20 +108,20 @@ class UIOperations(object):
                                 os.path.basename(file_path), mode='upload')
             upload_thread = threading.Thread(target=upload_file.upload_file_by_path, args=(file_path,
                                 self.current_server_path, self.ftp_control_sock, self.session_id,
-                                self.server_ip, self.progress_bar, self.msg_queue))
+                                self.server_ip, self.progress_bar, self.msg_queue, self.current_group))
             self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
             upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):
-        error_msg = self.send_command('MKD', os.path.join(self.current_server_path, dir_name))
+        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name))
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
 
     def delete_file_from_current_path(self, name, is_dir):
         if is_dir:
-            error_msg = self.send_command('RMD', os.path.join(self.current_server_path, name))
+            error_msg = self.send_command(False, 'RMD', os.path.join(self.current_server_path, name))
         else:
-            error_msg = self.send_command('DELE', os.path.join(self.current_server_path, name))
+            error_msg = self.send_command(False, 'DELE', os.path.join(self.current_server_path, name))
 
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
@@ -139,7 +138,7 @@ class UIOperations(object):
             self.refresh()
 
     def rename_file_in_current_path(self, file_name, new_file_name):
-        error_msg = self.send_command('RNTO', os.path.join(self.current_server_path, file_name),
+        error_msg = self.send_command(False, 'RNTO', os.path.join(self.current_server_path, file_name),
                                               os.path.join(self.current_server_path, new_file_name))
         print error_msg
         if error_msg.startswith('2'):  # 2xx errno is success
@@ -167,7 +166,7 @@ class UIOperations(object):
                                                self.ftp_control_sock, self.server_ip, self.current_group)
 
     def share_file_from_current_dir(self, file_name, user_name, permissions):
-        error_msg = self.send_command('SHAR', os.path.join(self.current_server_path, file_name),
+        error_msg = self.send_command(False, 'SHAR', os.path.join(self.current_server_path, file_name),
                                       user_name, str(permissions))
         print error_msg
         if error_msg.startswith('2'):  # 2xx errno is success
@@ -182,7 +181,7 @@ class UIOperations(object):
         return False
 
     def group_get(self):
-        msg = self.send_command('GROUP', 'GET')
+        msg = self.send_command(True, 'GROUP', 'GET')
         if msg.startswith('2'):
             print msg
             if len(msg) == 3:
@@ -193,11 +192,11 @@ class UIOperations(object):
                 return [msg[4:]]
 
     def group_create(self, group_name):
-        msg = self.send_command('GROUP', 'CREATE', group_name)
+        msg = self.send_command(True, 'GROUP', 'CREATE', group_name)
         if not msg.startswith('2'):
             tkMessageBox.showerror(title='Error', message='A group with this name already exists, please enter a new group name')
 
     def group_join(self, group_name):
-        msg = self.send_command('GROUP', 'JOIN', group_name)
+        msg = self.send_command(True, 'GROUP', 'JOIN', group_name)
         if not msg.startswith('2'):
             tkMessageBox.showerror(title='Error', message='A group with this name does not exists')
