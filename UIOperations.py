@@ -116,6 +116,9 @@ class UIOperations(object):
         error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name))
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
+        else:
+            tkMessageBox.showerror(title='Error', message='There is already a file or directory with the same name you entered on this '
+                                                          'directory. Please enter a different name.')
 
     def delete_file_from_current_path(self, name, is_dir):
         if is_dir:
@@ -126,7 +129,7 @@ class UIOperations(object):
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file')
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file.')
 
     def change_directory(self, directory):
         self.current_server_path = os.path.join(self.current_server_path, directory)
@@ -144,16 +147,16 @@ class UIOperations(object):
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to rename this file')
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to rename this file.')
         elif error_msg.startswith('505'): # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='There is already a file with the same name you entered on this '
-                                                          'directory. Please enter a different name')
+            tkMessageBox.showerror(title='Error', message='There is already a file or directory with the same name you entered on this '
+                                                          'directory. Please enter a different name.')
 
     def update_compenents(self, file_display=None, control_frame=None, groups_view=None):
-        '''
+        """
         Add a FileDisplay to be associated with this class to. file_display must be loaded with this function
         for some functions to work properly.
-        '''
+        """
         self.file_display = file_display
         self.control_frame = control_frame
         self.groups_view = groups_view
@@ -174,9 +177,9 @@ class UIOperations(object):
             self.refresh()
             return True  # success
         elif error_msg.startswith('550'):  # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to share this file')
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to share this file.')
         else:
-            tkMessageBox.showerror(title='Error', message='User {0} does not exists'.format(user_name))
+            tkMessageBox.showerror(title='Error', message='User {0} does not exists.'.format(user_name))
 
         return False
 
@@ -191,12 +194,24 @@ class UIOperations(object):
             else:
                 return [msg[4:]]
 
-    def group_create(self, group_name):
-        msg = self.send_command(True, 'GROUP', 'CREATE', group_name)
+    def group_create(self, group_name, group_pass):
+        msg = self.send_command(True, 'GROUP', 'CREATE', group_name, group_pass)
         if not msg.startswith('2'):
-            tkMessageBox.showerror(title='Error', message='A group with this name already exists, please enter a new group name')
+            tkMessageBox.showerror(title='Error', message='A group with this name already exists, please enter a new group name.')
+            return False
+        return True
 
-    def group_join(self, group_name):
-        msg = self.send_command(True, 'GROUP', 'JOIN', group_name)
-        if not msg.startswith('2'):
-            tkMessageBox.showerror(title='Error', message='A group with this name does not exists')
+    def group_join(self, group_name, group_pass):
+        if group_name not in self.groups_view.groups:
+            msg = self.send_command(True, 'GROUP', 'JOIN', group_name, group_pass)
+            if not msg.startswith('2'):
+                if msg.startswith('550'):
+                    tkMessageBox.showerror(title='Error', message='A group with this name does not exists.')
+                    return False
+                elif msg.startswith('430'):
+                    tkMessageBox.showerror(title='Error', message='Incorrect password.')
+                    return False
+            return True
+        else:
+            tkMessageBox.showerror(title='Error', message='You are in group "{0}" already.'.format(group_name))
+            return False

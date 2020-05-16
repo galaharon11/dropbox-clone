@@ -110,8 +110,8 @@ def create_db():
 
         cursor.execute('''CREATE TABLE groups (
                         group_id INTEGER PRIMARY KEY NOT NULL,
-                        group_name TEXT UNIQUE NOT NULL )''')
-        db.commit()
+                        group_name TEXT UNIQUE NOT NULL,
+                        group_password TEXT NOT NULL )''')
 
         # One to many relationship between files and groups.A file may be assoicated with user.
         # and not with group, if that is the case group_id will be null.

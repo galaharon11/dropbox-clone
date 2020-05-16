@@ -80,7 +80,7 @@ def create_main_window(user_name):
     control_frame.grid(row=0, column=0, columnspan=2, pady=(10, 0), padx=20, sticky='ew')
 
     groups_view = GroupsView(files_window, ui_operations)
-    groups_view.grid(row=1, column=0,sticky='sn', pady=(0,20), padx=(10,0))
+    groups_view.grid(row=1, column=0, sticky='snwe', pady=(0,20), padx=(10,0))
 
     ui_operations.update_compenents(file_display=file_display, control_frame=control_frame, groups_view=groups_view)
 

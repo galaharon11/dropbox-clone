@@ -80,3 +80,8 @@ class NoSuchGroup(FTPException):
     def __init__(self):
         self.value = '550 No such group'
         self.errno = 550
+
+class InvalidGroupPassword(FTPException):
+    def __init__(self):
+        self.value = '430 Invalid password'
+        self.errno = 430

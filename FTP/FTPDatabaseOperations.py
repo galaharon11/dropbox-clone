@@ -91,10 +91,10 @@ def change_file_path_on_db(server_db, file_path, new_file_path, permissions=1):
     cursor.execute('''UPDATE files SET file_path=? WHERE file_path=?''', (new_file_path, file_path))
     server_db.commit()
 
-def create_group(server_db, group_name, user_id):
+def create_group(server_db, group_name, group_password, user_id):
     try:
         cursor = server_db.cursor()
-        cursor.execute('''INSERT INTO groups VALUES (null, ?)''', (group_name,))
+        cursor.execute('''INSERT INTO groups VALUES (null, ?, ?)''', (group_name, group_password))
         server_db.commit()
         cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
         group_id = int(cursor.fetchone()[0])
@@ -120,17 +120,25 @@ def get_user_groups(server_db, user_id):
     else:
         return []
 
-def join_group(server_db, group_name, user_id, permissions=0):
+def join_group(server_db, group_name, group_password, user_id, permissions=1):
+    """
+    The function will return 0 if sucess, 1 if the group does not exists and 2 if
+    the password is incorrect.
+    """
     cursor = server_db.cursor()
 
-    cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
-    group_id = cursor.fetchone()
-    if not group_id:
-        return False
-    group_id = int(group_id[0])
+    cursor.execute('''SELECT group_id, group_password FROM groups WHERE group_name=?''', (group_name,))
+    query = cursor.fetchone()
+    if not query:
+        return 1
+
+    if group_password != query[1]:
+        return 2
+
+    group_id = int(query[0])
     cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, permissions))
     server_db.commit()
-    return True
+    return 0
 
 def get_group_id_if_user_in_group(server_db, group_name, user_id):
     cursor = server_db.cursor()

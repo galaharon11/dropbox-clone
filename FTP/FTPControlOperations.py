@@ -211,19 +211,19 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
 
     GROUP JOIN:
     The command will tell the server to connect the user to a group.
-    GROUP JOIN syntax: GROUP JOIN group_name SESSIONID=sessionid
+    GROUP JOIN syntax: GROUP JOIN group_name group_password SESSIONID=sessionid
 
     GROUP CREATE:
     The command will tell the server to create a new group, and connect the user to this group with
     OWNER permissions.
-    GROUP JOIN syntax: GROUP CREATE group_name SESSIONID=sessionid
+    GROUP JOIN syntax: GROUP CREATE group_name group_password SESSIONID=sessionid
     """
 
     operations = {'GET':GroupOperations.group_get,
                   'CREATE':GroupOperations.group_create,
                   'JOIN':GroupOperations.group_join }
 
-    if len(params) >= 2:
-        completion_queue.put_nowait(operations[params[0]](params[1], server_db, user_id, completion_queue))
+    if len(params) >= 3:
+        completion_queue.put_nowait(operations[params[0]](params[1], params[2], server_db, user_id, completion_queue))
     else:
         completion_queue.put_nowait(operations[params[0]](user_id, server_db, completion_queue))
