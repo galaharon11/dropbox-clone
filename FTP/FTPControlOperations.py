@@ -3,7 +3,9 @@ from shutil import rmtree
 
 import FTPExceptions
 import FTPDatabaseOperations
+import GroupOperations
 from PermissionsConsts import *
+
 
 def get_file_from_group_and_check_permission(group, relative_path, server_db, user_id,
                                              permission_filter, path_to_files):
@@ -24,12 +26,23 @@ def get_file_from_group_and_check_permission(group, relative_path, server_db, us
                 abs_path = shared_file
         if not abs_path:
             raise FTPExceptions.PermissionDenied
-    else:
+
+    elif group == '':
+        # File does not associated with a group
         abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+
+    else:
+        group_id = FTPDatabaseOperations.get_group_id_if_user_in_group(server_db, group, user_id)
+        #TODO: check for group permissions
+        if group_id:
+            abs_path = os.path.join(path_to_files, 'g' + str(group_id), relative_path[1:])
+        else:
+            raise FTPExceptions.NoSuchGroup
+
     return abs_path
 
 
-def append_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+def append_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Add a file to the FTP server.
     command syntax: APPE file_path_on_server SESSIONID=sessionid
@@ -39,14 +52,16 @@ def append_file(params, user_id, path_to_files, server_db, command_queue, compil
     else:
         relative_path, group = params[0], ''
 
-    print relative_path
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, 0, path_to_files)
-    print abs_path
-    command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
+    print 'control: ', abs_path
+    if group:
+        command_queue.put_nowait(' '.join(['APPE', abs_path, group, 'USERID=' + str(user_id)]))
+    else:
+        command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
 
 
-def get_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+def get_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Get a file from FTP server. if group is specified with GET, GET will get
     a file associated to a the specied group.
@@ -59,11 +74,14 @@ def get_file(params, user_id, path_to_files, server_db, command_queue, compilati
 
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, DOWNLOAD, path_to_files)
+    if group:
+        command_queue.put_nowait(' '.join(['GET', abs_path, group, 'USERID=' + str(user_id)]))
+    else:
+        command_queue.put_nowait(' '.join(['GET', abs_path, 'USERID=' + str(user_id)]))
 
-    command_queue.put_nowait(' '.join(['GET', abs_path, 'USERID=' + str(user_id)]))
 
 
-def list_files(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+def list_files(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     LIST command will list every file in dir_path. group is optional parameter and it indicates
     that the server should list files shared by this group. group parameter can be specified
@@ -74,7 +92,7 @@ def list_files(params, user_id, path_to_files, server_db, command_queue, compila
     command_queue.put_nowait(' '.join(['LIST'] + params + ['USERID=' + str(user_id)]))
 
 
-def delete_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+def delete_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Delete a file on server.
     DELE stntax: DELE file_name group(optional) SESSIONID=sessionid
@@ -90,12 +108,12 @@ def delete_file(params, user_id, path_to_files, server_db, command_queue, compil
     if os.path.exists(abs_path):
         FTPDatabaseOperations.remove_file_from_db(server_db, abs_path, user_id)
         os.remove(abs_path)
-        compilation_queue.put_nowait('213 File deleted.')
+        completion_queue.put_nowait('213 File deleted.')
     else:
         raise FTPExceptions.FileDoesNotExists
 
 
-def rename_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+def rename_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     On standart ftp servers, to rename a file the client must enter RNFR command
     and RNTO command right after it. On this implementation, the client need to
@@ -117,14 +135,46 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, compil
         if not os.path.exists(new_abs_path):
             FTPDatabaseOperations.change_file_path_on_db(server_db, abs_path, new_abs_path)
             os.rename(abs_path, new_abs_path)
-            compilation_queue.put_nowait('213 File name changed.')
+            completion_queue.put_nowait('213 File name changed.')
         else:
             raise FTPExceptions.FileAlreadyExists
     else:
         raise FTPExceptions.FileDoesNotExists
 
+def mkdir(params, user_id, path_to_files, server_db, command_queue, completion_queue):
+    """
+    Create a directory in the server.
+    MKD stntax: MKD dir_path SESSIONID=sessionid
+    """
+    relative_path = params[0]
+    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+    if os.path.exists(abs_path):
+        raise FTPExceptions.FileAlreadyExists
+    else:
+        os.mkdir(abs_path)
+        completion_queue.put_nowait('212 Directory created.')
 
-def share_file(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+
+def rmdir(params, user_id, path_to_files, server_db, command_queue, completion_queue):
+    """
+    Remove a directory on server
+    RMD stntax: RMD dir_path SESSIONID=sessionid
+    """
+    relative_path = params[0]
+    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+    if os.path.exists(abs_path):
+        for directory in os.walk(abs_path, topdown=False):  # Iterate directory recursively
+            for file_path in directory[2]:
+                abs_file_path = os.path.join(directory[0], file_path)
+                FTPDatabaseOperations.remove_file_from_db(server_db, abs_file_path, user_id)
+
+        rmtree(abs_path)  # delete directory recursively
+        completion_queue.put_nowait('212 Directory deleted.')
+    else:
+        raise FTPExceptions.FileDoesNotExists
+
+
+def share_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     This command is not a valid ftp command. It will tell the server to share a specific file with
     other user, specified by user_name param. permissions argument will indicate the
@@ -143,41 +193,37 @@ def share_file(params, user_id, path_to_files, server_db, command_queue, compila
 
     if os.path.exists(abs_path):
         if FTPDatabaseOperations.add_user_to_file_db(server_db, abs_path, user_name, permissions=permissions):
-            compilation_queue.put_nowait('213 File shared successfully.')
+            completion_queue.put_nowait('213 File shared successfully.')
         else:
             raise FTPExceptions.InternalError
     else:
         raise FTPExceptions.FileDoesNotExists
 
+def group_operations(params, user_id, path_to_files, server_db, command_queue, completion_queue):
+    """
+    This command is not a valid ftp command.
+    The command has several uses:
 
-def mkdir(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
+    GROUP GET:
+    The command will tell the server to return all the groups that the user
+    is in them. The user will reply with "211 group_name1,group_name2,group_name3..."
+    GROUP GET syntax: GROUP GET SESSIONID=sessionid
+
+    GROUP JOIN:
+    The command will tell the server to connect the user to a group.
+    GROUP JOIN syntax: GROUP JOIN group_name group_password SESSIONID=sessionid
+
+    GROUP CREATE:
+    The command will tell the server to create a new group, and connect the user to this group with
+    OWNER permissions.
+    GROUP JOIN syntax: GROUP CREATE group_name group_password SESSIONID=sessionid
     """
-    Create a directory in the server.
-    MKD stntax: MKD dir_path SESSIONID=sessionid
-    """
-    relative_path = params[0]
-    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
-    if os.path.exists(abs_path):
-        raise FTPExceptions.FileAlreadyExists
+
+    operations = {'GET':GroupOperations.group_get,
+                  'CREATE':GroupOperations.group_create,
+                  'JOIN':GroupOperations.group_join }
+
+    if len(params) >= 3:
+        completion_queue.put_nowait(operations[params[0]](params[1], params[2], server_db, user_id, completion_queue))
     else:
-        os.mkdir(abs_path)
-        compilation_queue.put_nowait('212 Directory created.')
-
-
-def rmdir(params, user_id, path_to_files, server_db, command_queue, compilation_queue):
-    """
-    Remove a directory on server
-    RMD stntax: RMD dir_path SESSIONID=sessionid
-    """
-    relative_path = params[0]
-    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
-    if os.path.exists(abs_path):
-        for directory in os.walk(abs_path, topdown=False):  # Iterate directory recursively
-            for file_path in directory[2]:
-                abs_file_path = os.path.join(directory[0], file_path)
-                FTPDatabaseOperations.remove_file_from_db(server_db, abs_file_path, user_id)
-
-        rmtree(abs_path)  # delete directory recursively
-        compilation_queue.put_nowait('212 Directory deleted.')
-    else:
-        raise FTPExceptions.FileDoesNotExists
+        completion_queue.put_nowait(operations[params[0]](user_id, server_db, completion_queue))

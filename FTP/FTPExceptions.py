@@ -19,7 +19,7 @@ class NeedSessionID(FTPException):
     In this server, errno 332 means a client must specify a session id in order to continue.
     '''
     def __init__(self):
-        self.value = '332 need session id as argument, please specify command again with SESSION parameter'
+        self.value = '332 need session id as argument, please specify command again with SESSIONID parameter'
         self.errno = 332
 
 
@@ -68,3 +68,20 @@ class InternalError(FTPException):
     def __init__(self):
         self.value = '500 Internal error'
         self.errno = 500
+
+
+class GroupAlreadyExists(FTPException):
+    def __init__(self):
+        self.value = '550 Group already exists'
+        self.errno = 550
+
+
+class NoSuchGroup(FTPException):
+    def __init__(self):
+        self.value = '550 No such group'
+        self.errno = 550
+
+class InvalidGroupPassword(FTPException):
+    def __init__(self):
+        self.value = '430 Invalid password'
+        self.errno = 430

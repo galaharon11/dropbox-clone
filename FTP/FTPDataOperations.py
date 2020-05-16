@@ -58,13 +58,11 @@ def append_file(params, user_id, path_to_files, data_socket, database):
     else:
         file_path, group = params[0], ''
 
-    print file_path
-    abs_file_path = recieve_file(file_path, data_socket)
-    print abs_file_path
-    if abs_file_path:
-        FTPDatabaseOperations.add_file_to_db(database, abs_file_path, str(user_id), permissions=1)
+    recieve_file(file_path, data_socket)
+    if file_path:
+        FTPDatabaseOperations.add_file_to_db(database, file_path, str(user_id), group=group , permissions=1)
 
-    if not abs_file_path:
+    if not file_path:
         raise FTPExceptions.InternalError
     return "226 Trasfer complete."
 
@@ -76,9 +74,8 @@ def get_file(params, user_id, path_to_files, data_socket, database):
         file_path, group = params[0], ''
 
     data_socket.send(str(os.stat(file_path).st_size))
-    print file_path
-    abs_file_path = send_file(file_path, data_socket)
-    if not abs_file_path:
+    send_file(file_path, data_socket)
+    if not file_path:
         raise FTPExceptions.InternalError
     return "226 Trasfer complete."
 
@@ -86,21 +83,27 @@ def get_file(params, user_id, path_to_files, data_socket, database):
 def list_files(params, user_id, path_to_files, data_socket, database):
     if len(params) == 2:
         relative_path, group = params
+        if group != 'SHARED':
+            group_id = FTPDatabaseOperations.get_group_id_if_user_in_group(database, group, user_id)
+            if group_id:
+                abs_path = os.path.join(path_to_files, 'g' + str(group_id), relative_path[1:])
+            else:
+                raise FTPExceptions.PermissionDenied
     else:
         relative_path, group = params[0], ''
+        abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
 
-    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
-    if not os.path.exists(abs_path):
-        if relative_path=='\\' and not group:
-            os.mkdir(abs_path)
-        else:
-            raise FTPExceptions.FileDoesNotExists
+    if group == 'SHARED':
+            files_and_dirs_on_dir = FTPDatabaseOperations.get_all_files_associated_with_user(database,
+                                    user_id, permission_filter=1, reverse_filter=True)
+    else:
+        if not os.path.exists(abs_path):
+            if relative_path=='\\':
+                os.mkdir(abs_path)
+            else:
+                raise FTPExceptions.FileDoesNotExists
 
-    if not group:
         files_and_dirs_on_dir = map(lambda file_name: os.path.join(abs_path, file_name), os.listdir(abs_path))
-    elif group=='SHARED':
-        files_and_dirs_on_dir = FTPDatabaseOperations.get_all_files_associated_with_user(database,
-                                user_id, permission_filter=1, reverse_filter=True)
 
     dirs_on_dir = filter(lambda dir_path: os.path.isdir(dir_path), files_and_dirs_on_dir)
     files_on_dir = filter(lambda file_path: not os.path.isdir(file_path), files_and_dirs_on_dir)

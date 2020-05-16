@@ -49,6 +49,13 @@ class ControlFrame(tk.Frame):
         if dir_name:
             self.ui_operations.add_directory_from_current_directory(dir_name)
 
+    def set_upload_file_button(self, mode):
+        """
+        Mode is a boolean argument. False will disable the file button and True will enable it.
+        """
+        state = 'normal' if mode else 'disabled'
+        self.upload_file_button.configure(state=state)
+
     def __init__(self, parent, file_display, ui_operations):
         tk.Frame.__init__(self, parent)
 
