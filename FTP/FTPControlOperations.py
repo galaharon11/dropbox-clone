@@ -206,8 +206,8 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
     operations = {'GET':GroupOperations.group_get,
                   'CREATE':GroupOperations.group_create,
                   'JOIN':GroupOperations.group_join }
-
+    print 'params', params
     if len(params) >= 2:
-        operations[params[0]](params[1], server_db, completion_queue)
+        completion_queue.put_nowait(operations[params[0]](params[1], server_db, user_id, completion_queue))
     else:
-        operations[params[0]](server_db, completion_queue)
+        completion_queue.put_nowait(operations[params[0]](user_id, server_db, completion_queue))

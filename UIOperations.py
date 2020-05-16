@@ -16,6 +16,7 @@ class UIOperations(object):
         self.session_id = session_id
         self.user_name = user_name
         self.current_group = ''
+        self.groups = self.group_get()
 
     def set_partitaion(self, group):
         if group == 'Shared files':
@@ -32,6 +33,7 @@ class UIOperations(object):
         if self.file_display:
             self.file_display.refresh_display()
             self.control_frame.set_path(self.current_server_path.replace('\\','/'))
+            #self.groups_view.refresh()
             # Sometimes this funtions sets focus for this widget
             self.master_window.focus_set()
 
@@ -122,7 +124,6 @@ class UIOperations(object):
         else:
             error_msg = self.send_command('DELE', os.path.join(self.current_server_path, name))
 
-        print error_msg
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
@@ -149,13 +150,14 @@ class UIOperations(object):
             tkMessageBox.showerror(title='Error', message='There is already a file with the same name you entered on this '
                                                           'directory. Please enter a different name')
 
-    def update_compenents(self, file_display=None, control_frame=None):
+    def update_compenents(self, file_display=None, control_frame=None, groups_view=None):
         '''
         Add a FileDisplay to be associated with this class to. file_display must be loaded with this function
         for some functions to work properly.
         '''
         self.file_display = file_display
         self.control_frame = control_frame
+        self.groups_view = groups_view
 
     def get_current_path(self):
         return self.current_server_path
@@ -178,3 +180,24 @@ class UIOperations(object):
             tkMessageBox.showerror(title='Error', message='User {0} does not exists'.format(user_name))
 
         return False
+
+    def group_get(self):
+        msg = self.send_command('GROUP', 'GET')
+        if msg.startswith('2'):
+            print msg
+            if len(msg) == 3:
+                return []
+            elif ',' in msg:
+                return msg[4:].split(',')
+            else:
+                return [msg[4:]]
+
+    def group_create(self, group_name):
+        msg = self.send_command('GROUP', 'CREATE', group_name)
+        if not msg.startswith('2'):
+            tkMessageBox.showerror(title='Error', message='A group with this name already exists, please enter a new group name')
+
+    def group_join(self, group_name):
+        msg = self.send_command('GROUP', 'JOIN', group_name)
+        if not msg.startswith('2'):
+            tkMessageBox.showerror(title='Error', message='A group with this name does not exists')

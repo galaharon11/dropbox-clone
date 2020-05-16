@@ -122,12 +122,12 @@ def create_db():
                         FOREIGN KEY(file_id) REFERENCES files (file_id) )''')
 
         cursor.execute('''CREATE TABLE groups (
-                        group_id INTEGER NOT NULL,
+                        group_id INTEGER PRIMARY KEY NOT NULL,
                         group_name TEXT UNIQUE NOT NULL )''')
 
         # Many to many relationship
         cursor.execute('''CREATE TABLE users_groups (
-                        user_id INTEGER PRIMARY KEY NOT NULL,
+                        user_id INTEGER NOT NULL,
                         group_id INTEGER NOT NULL,
                         permissions INT1,
                         FOREIGN KEY(user_id) REFERENCES users (user_id),

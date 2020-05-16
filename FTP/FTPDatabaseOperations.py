@@ -86,29 +86,41 @@ def change_file_path_on_db(server_db, file_path, new_file_path, permissions=1):
 def create_group(server_db, group_name, user_id):
     try:
         cursor = server_db.cursor()
-        cursor.execute('''INSERT INTO groups VALUES (?, ?)''', (group_name,))
+        cursor.execute('''INSERT INTO groups VALUES (null, ?)''', (group_name,))
         server_db.commit()
-        cursor.execute('''SELECT group_id FROM groups WHERE group=?''', (group_name,))
+        cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
         group_id = int(cursor.fetchone()[0])
 
         cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, OWNER))
-    except IntegrityError:
+        server_db.commit()
+    except IntegrityError as e:
+        print str(e)
         return False
     return True
 
 def get_user_groups(server_db, user_id):
     cursor = server_db.cursor()
-    cursor.execute('''SELECT group_id FROM groups WHERE user_id=?''', (user_id,))
+    cursor.execute('''SELECT group_id FROM users_groups WHERE user_id=?''', (user_id,))
     group_ids = cursor.fetchall()
-    group_ids = map(str, group_ids)
-    cursor.execute('''SELECT group_name FROM groups WHERE group_id IN ({0})'''.format(','.join(file_ids)))
+    group_ids = map(lambda x: str(x[0]), group_ids)
+    print ','.join(group_ids)
+    cursor.execute('''SELECT group_name FROM groups WHERE group_id IN ({0})'''.format(','.join(group_ids)))
     group_names = cursor.fetchall()
-    return list(group_names)
+    if group_names:
+        group_names = map(lambda x: x[0], group_names)
+        return list(group_names)
+    else:
+        return []
 
-def join_group(server_db, user_id, group_name, permissions=0):
+def join_group(server_db, group_name, user_id, permissions=0):
     cursor = server_db.cursor()
+    print 'name', group_name
     cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
-    group_id = int(cursor.fetchone())
+    group_id = cursor.fetchone()
+    if not group_id:
+        print group_id
+        return False
+    group_id = int(group_id[0])
     cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, permissions))
-    group_names = cursor.fetchall()
-    return list(group_names)
+    server_db.commit()
+    return True

@@ -42,7 +42,7 @@ class FTPServer(threading.Thread):
         data_port = get_random_port_socket.getsockname()[1]
         get_random_port_socket.close()
 
-        completion_queue.put_nowait(' PORT {0}'.format(data_port))
+        completion_queue.put_nowait('227 PORT {0}'.format(data_port))
 
         # Create data socket. The data socket will trasfer the files, while the control socket (port 21)
         # will trasfer and recieve commands.
@@ -76,7 +76,12 @@ class FTPServer(threading.Thread):
         """
         Implemnts an FTP passive protocol
         """
-        command_queue, completion_queue = None, None
+        # Create a command queue to 'share' data between control thread (this thread) to the data thread
+        command_queue = Queue()
+        # Create a complition queue so control thread will know when the data thread finished
+        # handling a request
+        completion_queue = Queue()
+
         control_fucntions = {'APPE': FTPControlOperations.append_file,
                              'GET' : FTPControlOperations.get_file,
                              'LIST': FTPControlOperations.list_files,
@@ -92,11 +97,6 @@ class FTPServer(threading.Thread):
                 command = clientsock.recv(1024)
                 print command
                 if command == 'PASV':
-                    # Create a command queue to 'share' data between control thread (this thread) to the data thread
-                    command_queue = Queue()
-                    # Create a complition queue so control thread will know when the data thread finished
-                    # handling a request
-                    completion_queue = Queue()
                     data_thread = threading.Thread(target=self.handle_ftp_data,
                                                    args=(command_queue, completion_queue))
                     data_thread.deamon = True
@@ -157,7 +157,6 @@ class FTPServer(threading.Thread):
         # Will map a session's id to user's id in the database
         self.sessions_id_to_user = {}
         self.path_to_files = 'files'
-        #self.path_to_files = os.path.join(os.path.dirname(__file__), 'files')
         if not os.path.exists(self.path_to_files):
             os.mkdir(self.path_to_files)
 
