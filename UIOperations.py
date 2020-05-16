@@ -48,12 +48,13 @@ class UIOperations(object):
         self.ftp_control_sock.send(command)
         return self.ftp_control_sock.recv(1024)
 
-    def destroy_progressbar(self, error_msg):
+    def destroy_progressbar(self, error_msg, show_message_box=True):
         mode = self.progress_bar.mode
         self.progress_bar.destroy()
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
-            tkMessageBox.showinfo(title='Success', message='File {0}ed successfully'.format(mode))
+            if show_message_box:
+                tkMessageBox.showinfo(title='Success', message='File {0}ed successfully'.format(mode))
             if self.do_func_when_finish:
                 self.do_func_when_finish()
                 self.do_func_when_finish = None
@@ -64,52 +65,54 @@ class UIOperations(object):
                                                           'Please delete the file on server, change its name or upload'
                                                           'the file on a different directory')
 
-    def check_if_thread_finished(self):
+    def check_if_thread_finished(self, show_message_box):
         if not self.msg_queue.empty():
             msg = self.msg_queue.get_nowait()
             if msg.startswith('bytes'):
                 self.progress_bar.set_byte_coutner(int(msg[msg.find(' ') + 1:]))
                 self.master_window.after_cancel(self.after_instance)
-                self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+                self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
                 while not self.msg_queue.empty():
                     msg = self.msg_queue.get_nowait()
                     if not msg.startswith('bytes'):
-                        self.destroy_progressbar(msg)
-                        self.should_destroy_progressbar = True
+                        self.destroy_progressbar(msg, show_message_box)
+                        self.download_completed = True
                         return
             else:
-                self.destroy_progressbar(msg)
-                self.should_destroy_progressbar = True
+                self.destroy_progressbar(msg, show_message_box)
+                self.download_completed = True
 
-        if not self.should_destroy_progressbar:
-            self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+        if not self.download_completed:
+            self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
 
-    def download_from_current_server_path(self, file_name_on_server, file_path_on_client='', do_func_when_finish=None):
+    def download_from_current_server_path(self, file_name_on_server, file_path_on_client='',
+                                          do_func_when_finish=None, show_message_box=True):
         file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
         self.do_func_when_finish = do_func_when_finish
-        self.should_destroy_progressbar = False
+        self.download_completed = False
         self.msg_queue = Queue.Queue()
         self.progress_bar = ProgressBar(self.master_window, 0, file_name_on_server, mode='download')
 
         download_thread = threading.Thread(target=download_file.download_file_by_path, args=(file_path_on_server,
                                 file_path_on_client, self.ftp_control_sock, self.session_id,
                                 self.server_ip, self.progress_bar, self.msg_queue, self.current_group))
-        self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+        self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
         download_thread.start()
 
 
     def upload_from_current_server_path(self):
         file_path = tkFileDialog.askopenfilename(parent=self.master_window , title='Select file')
         if file_path:
-            self.should_destroy_progressbar = False
+            self.download_completed = False
             self.do_func_when_finish = None
+            show_message_box = False
             self.msg_queue = Queue.Queue()
             self.progress_bar = ProgressBar(self.master_window, os.stat(file_path).st_size,
                                 os.path.basename(file_path), mode='upload')
             upload_thread = threading.Thread(target=upload_file.upload_file_by_path, args=(file_path,
                                 self.current_server_path, self.ftp_control_sock, self.session_id,
                                 self.server_ip, self.progress_bar, self.msg_queue, self.current_group))
-            self.after_instance = self.master_window.after(100, self.check_if_thread_finished)
+            self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
             upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):

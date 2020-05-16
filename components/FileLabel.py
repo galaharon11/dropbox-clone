@@ -108,5 +108,3 @@ class FileLabel(tk.Label):
         self.popup_menu.add_separator()
         self.popup_menu.add_command(label="Delete", command=self.file_view_parent.remove_marked_files)
         self.bind("<Button-3>", lambda event: self.popup_menu_show(event))
-
-        #self.do_grid(file_number)
