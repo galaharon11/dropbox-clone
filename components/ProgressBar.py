@@ -10,7 +10,11 @@ class ProgressBar(tk.Toplevel):
         self.mode = mode
         self.byte_counter = 0
 
-        label = tk.Label(self, text='{0}ing file: {1}'.format(mode, file_name))
+        try:
+            label = tk.Label(self, text=u'{0}ing file: {1}'.format(mode, file_name))
+        except UnicodeDecodeError:
+            label = tk.Label(self, text=u'{0}ing file'.format(mode))
+
         label.pack(side='top', padx=20, pady=10)
         self.progressbar_val = tk.IntVar()
         self.progressbar = ttk.Progressbar(self, orient='horizontal', length=300,

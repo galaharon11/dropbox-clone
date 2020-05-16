@@ -113,7 +113,7 @@ class UIOperations(object):
             upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):
-        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name))
+        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name).encode('utf8'))
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         else:
