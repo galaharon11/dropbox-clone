@@ -121,47 +121,74 @@ class FileDisplay(tk.Canvas):
         self.unmark_all_file_labels()
 
 
-    def download_next_file_if_last_finished(self, path, labels):
+    def download_next_file_if_last_finished(self, path_on_client, names):
         if self.ui_operations.download_completed:
-            file_label = labels.pop()
-            self.ui_operations.download_from_current_server_path(file_label.file_name,
-                               file_path_on_client=os.path.join(path, file_label.file_name),
-                               show_message_box=False)
-        if labels:
+            file_name = names.pop()
+            self.ui_operations.download_from_current_server_path(file_name,
+                               os.path.join(path_on_client, file_name), show_message_box=False)
+        if names:
             self.after_cancel(self.after_instance)
             self.after_instance = self.after(100, lambda:
-                                  self.download_next_file_if_last_finished(path, labels))
+                                  self.download_next_file_if_last_finished(path_on_client, names))
+
+    def download_dir(self, path_on_client, dir_name):
+        path_to_dir = path_on_client
+        os.mkdir(path_to_dir)
+        dirs, files = self.ui_operations.recursive_list(dir_name)
+        print dirs, files
+        for d in dirs:
+            d = d.replace('\\','/')
+            d = os.path.relpath(d, '/' + os.path.basename(path_to_dir))
+            os.makedirs(os.path.join(path_to_dir, d))
+        if files:
+            files = map(lambda f: f[1:], files)
+            #print path_on_client, files
+            f = files.pop()
+            file_path = os.path.join(os.path.dirname(path_on_client), f)
+            print file_path, f
+            print
+            self.ui_operations.download_from_current_server_path(f,
+                               file_path, show_message_box=False)
+            self.after_instance = self.after(100, lambda:
+                    self.download_next_file_if_last_finished(os.path.dirname(path_on_client), files))
 
     def download_marked_files(self):
-        non_dir_labels = filter(lambda l: not l.is_dir, self.marked_labels)
-        if len(non_dir_labels) > 1:
+        if len(self.marked_labels) > 1:
             path = tkFileDialog.askdirectory(parent=self.parent, title='Select directory to save files')
             if path:
                 ignored_files = filter(lambda label: os.path.exists(os.path.join(
-                                                     path ,label.file_name)), non_dir_labels)
+                                        path ,label.file_name)), self.marked_labels)
                 if ignored_files:
                     ignored_files_string = ', '.join(map(lambda label: label.file_name , ignored_files))
-                    tkMessageBox.showwarning(title='Warning', message='This directory alredy contain a file(s) '
+                    tkMessageBox.showwarning(title='Warning', message='This directory already contain a file(s) '
                     'with the name(s) {0}. The program will not download those file(s)'.format(ignored_files_string))
 
-                non_dir_labels = list(set(non_dir_labels) - set(ignored_files))
+                labels = list(set(self.marked_labels) - set(ignored_files))
 
-                # The donwlaod function is async but we need to download many files.
-                # after() can help with this problem.
-                if non_dir_labels:
-                    file_label = non_dir_labels.pop()
-                    self.ui_operations.download_from_current_server_path(file_label.file_name,
-                                file_path_on_client=os.path.join(path, file_label.file_name),
-                                show_message_box=False)
-                    self.after_instance = self.after(100, lambda:
-                                        self.download_next_file_if_last_finished(path, non_dir_labels))
+                if labels:
+                    label = labels.pop()
+                    print label, label.is_dir
+                    if label.is_dir:
+                        self.download_dir(path, label.file_name)
+                    else:
+                        path_to_file = os.path.join(path, label.file_name)
+                        self.ui_operations.download_from_current_server_path(label.file_name,
+                                    path_to_file, show_message_box=False)
+                        # The donwlaod function is async but we need to download many files.
+                        # after() can help with this problem.
+                        self.after_instance = self.after(100, lambda:
+                            self.download_next_file_if_last_finished(path,
+                                                [l.file_name for l in labels]))
 
-        elif len(non_dir_labels) == 1:
-            path = tkFileDialog.asksaveasfilename(parent=self.parent, initialfile=non_dir_labels[0].file_name,
-                                                  title='Select directory to save files')
+        elif len(self.marked_labels) == 1:
+            path = tkFileDialog.asksaveasfilename(parent=self.parent, initialfile=self.marked_labels[0].file_name,
+                                                  title='Save file')
             if path:
-                self.ui_operations.download_from_current_server_path(non_dir_labels[0].file_name,
-                                    file_path_on_client=path)
+                if self.marked_labels[0].is_dir:
+                    self.download_dir(path, self.marked_labels[0].file_name)
+                else:
+                    self.ui_operations.download_from_current_server_path(self.marked_labels[0].file_name,
+                                                                    path, is_dir=self.marked_labels[0].is_dir)
 
         self.unmark_all_file_labels()
 

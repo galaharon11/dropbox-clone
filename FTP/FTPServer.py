@@ -76,7 +76,6 @@ class FTPServer(threading.Thread):
         """
         Implemnts an FTP passive protocol
         """
-
         control_fucntions = {'APPE': FTPControlOperations.append_file,
                              'GET' : FTPControlOperations.get_file,
                              'LIST': FTPControlOperations.list_files,
