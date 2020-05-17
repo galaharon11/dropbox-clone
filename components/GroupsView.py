@@ -11,7 +11,7 @@ class GroupsView(tk.Frame):
 
     def refresh(self):
         self.groups = ['My files', 'Shared files'] + self.ui_operations.group_get()
-        self.listbox.delete(0,'end')
+        self.listbox.delete(0, 'end')
         for group in self.groups:
             self.listbox.insert('end', group)
 
@@ -49,6 +49,4 @@ class GroupsView(tk.Frame):
         self.scroller.configure(command=self.listbox.yview)
 
         self.listbox_wrap_frame.pack(side='top', fill='y', expand=True)
-
-
         self.listbox.bind('<Double-Button-1>', self.listbox_pressed)

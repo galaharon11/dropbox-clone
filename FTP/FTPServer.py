@@ -3,6 +3,7 @@ import threading
 from random import randint
 from Queue import Queue
 import os
+import traceback
 
 import FTPDataOperations
 import FTPControlOperations
@@ -131,6 +132,7 @@ class FTPServer(threading.Thread):
                 control_sock.send('502 not implemented')
 
             except ValueError:
+                traceback.print_exc()
                 control_sock.send('501 Syntax error in parameters or arguments')
 
             except socket.error as e:

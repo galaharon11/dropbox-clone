@@ -25,7 +25,7 @@ class ShareDialog(tk.Toplevel):
         self.file_name_to_share = file_name_to_share
         self.is_dir = is_dir
 
-        default_font = tkFont.nametofont("TkTextFont")
+        default_font = tkFont.font("TkTextFont")
         text_font = default_font.copy()
         text_font.configure(size=12)
 

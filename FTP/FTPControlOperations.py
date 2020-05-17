@@ -218,7 +218,7 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
 
     GROUP GET:
     The command will tell the server to return all the groups that the user
-    is in them. The user will reply with "211 group_name1,group_name2,group_name3..."
+    is in them. The server will reply with "211 group_name1,group_name2,group_name3..."
     GROUP GET syntax: GROUP GET SESSIONID=sessionid
 
     GROUP JOIN:
@@ -229,13 +229,32 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
     The command will tell the server to create a new group, and connect the user to this group with
     OWNER permissions.
     GROUP JOIN syntax: GROUP CREATE group_name group_password SESSIONID=sessionid
+
+    GROUP LIST:
+    The command will tell the server to return all the users of a given group. The server
+    will reply with "211 username1,username2,username3...". The first username is always the username of
+    the owner of this group.
+    GROUP LIST syntax: GROUP LIST group_name SESSIONID=sessionid
+
+    GROUP DELETE:
+    The command will tell the server to delete the given group.
+    GROUP DELETE syntax: GROUP DELETE group_name SESSIONID=sessionid
+
+    GROUP REMOVE:
+    The command will tell the server to remove the given user from the given group.
+    GROUP REMOVE syntax: GROUP REMOVE group_name username SESSIONID=sessionid
     """
 
     operations = {'GET':GroupOperations.group_get,
                   'CREATE':GroupOperations.group_create,
-                  'JOIN':GroupOperations.group_join }
+                  'JOIN':GroupOperations.group_join,
+                  'LIST': GroupOperations.group_list,
+                  'DELETE': GroupOperations.group_delete,
+                  'REMOVE': GroupOperations.group_remove }
 
     if len(params) >= 3:
-        completion_queue.put_nowait(operations[params[0]](params[1], params[2], server_db, user_id, completion_queue))
+        completion_queue.put_nowait(operations[params[0]](params[1], params[2], server_db, user_id))
+    elif len(params) == 2:
+        completion_queue.put_nowait(operations[params[0]](params[1], server_db, user_id))
     else:
-        completion_queue.put_nowait(operations[params[0]](user_id, server_db, completion_queue))
+        completion_queue.put_nowait(operations[params[0]](server_db, user_id))

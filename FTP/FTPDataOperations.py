@@ -5,7 +5,6 @@ import FTPDatabaseOperations
 
 
 def recieve_file(abs_file_path, data_socket):
-    # TODO: Check if file name already in server, and alert client
     file = None
     try:
         print abs_file_path

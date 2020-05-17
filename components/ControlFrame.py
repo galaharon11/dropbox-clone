@@ -3,6 +3,8 @@ import tkSimpleDialog
 from PIL import Image, ImageTk
 import os
 
+from ManageGroupWindow import ManageGroupWindow
+
 
 class ControlFrame(tk.Frame):
     def set_path(self, path):
@@ -50,7 +52,7 @@ class ControlFrame(tk.Frame):
             self.ui_operations.add_directory_from_current_directory(dir_name)
 
     def manage_group(self):
-        pass
+        ManageGroupWindow(self.parent, self.ui_operations)
 
     def set_mode(self, mode):
         """

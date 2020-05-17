@@ -1,4 +1,6 @@
 
+import tkMessageBox
+
 from passive_connect import passive_connect
 
 
@@ -19,7 +21,12 @@ def list_directory_by_path(server_path, session_id, control_sock, server_ip, gro
         control_sock.send(' '.join(['LIST', server_path, group, 'SESSIONID=' + str(session_id)]).encode('utf8'))
     else:
         control_sock.send(' '.join(['LIST', server_path, 'SESSIONID=' + str(session_id)]).encode('utf8'))
-    files, dirs = data_sock.recv(1024).decode('utf8').split(';;;')
+
+    data = data_sock.recv(1024)
+    if data == '550 permission denied':
+        if group:
+            tkMessageBox.showerror('Error', 'You are no longer part of this group.')
+    files, dirs = data.decode('utf8').split(';;;')
     files = filter(lambda name: name, files.split(','))
     dirs = filter(lambda name: name, dirs.split(','))
     data_sock.close()
