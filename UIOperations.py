@@ -45,13 +45,13 @@ class UIOperations(object):
     def send_command(self, is_group_command, command_name, *params):
         """
         Sends a command to the ftp server.
-        :returns: the error string received from the server after sending the command.
+        returns the error string received from the server after sending the command.
         """
         if self.current_group and not is_group_command:
             # Group commands does not accept group parameter.
             params = params + (self.current_group,)
         command = ' '.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
-        self.ftp_control_sock.send(command)
+        self.ftp_control_sock.send(command.encode('utf8'))
         return self.ftp_control_sock.recv(1024)
 
     def destroy_progressbar(self, error_msg, show_message_box=True, refresh_when_finish=True):
@@ -128,7 +128,7 @@ class UIOperations(object):
             upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):
-        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name).encode('utf8'))
+        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name))
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         else:

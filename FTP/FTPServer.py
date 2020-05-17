@@ -72,7 +72,7 @@ class FTPServer(threading.Thread):
                 print str(e)
                 completion_queue.put_nowait(str(e))
 
-    def handle_ftp_control(self, clientsock):
+    def handle_ftp_control(self, control_sock):
         """
         Implemnts an FTP passive protocol
         """
@@ -88,7 +88,7 @@ class FTPServer(threading.Thread):
 
         while True:
             try:
-                command = clientsock.recv(1024)
+                command = control_sock.recv(1024).decode('utf8')
                 print command
                 if command == 'PASV':
                     # Create a command queue to 'share' data between control thread (this thread) to the data thread
@@ -104,7 +104,7 @@ class FTPServer(threading.Thread):
                     while completion_queue.empty():
                         pass
 
-                    clientsock.send(completion_queue.get_nowait())
+                    control_sock.send(completion_queue.get_nowait())
                     continue
 
                 # Check if the server has the user's files firectory, create it if not
@@ -121,25 +121,25 @@ class FTPServer(threading.Thread):
                 while completion_queue.empty():
                     pass
 
-                clientsock.send(completion_queue.get_nowait())
+                control_sock.send(completion_queue.get_nowait())
 
             except FTPExceptions.FTPException as e:
                 print 'catched:', str(e)
-                clientsock.send(str(e))
+                control_sock.send(str(e))
 
             except KeyError:
-                clientsock.send('502 not implemented')
+                control_sock.send('502 not implemented')
 
             except ValueError:
-                clientsock.send('501 Syntax error in parameters or arguments')
+                control_sock.send('501 Syntax error in parameters or arguments')
 
             except socket.error as e:
                 return
 
     def handle_new_control_connection(self):
         while True:
-            clientsock, addr = self.control_socket.accept()
-            client_control_thread = threading.Thread(target=self.handle_ftp_control, args=(clientsock,))
+            control_sock, addr = self.control_socket.accept()
+            client_control_thread = threading.Thread(target=self.handle_ftp_control, args=(control_sock,))
             client_control_thread.daemon = True
             client_control_thread.start()
 

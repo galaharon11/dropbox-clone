@@ -103,12 +103,15 @@ def list_files(params, user_id, path_to_files, data_socket, database):
             else:
                 raise FTPExceptions.FileDoesNotExists
 
-        files_and_dirs_on_dir = map(lambda file_name: os.path.join(abs_path, file_name), os.listdir(abs_path))
+        # The unicode function here is for unicode support. When a program use os.listdir() with a unicode
+        # path, os.listdir() will return unicode files.
+        files_and_dirs_on_dir = map(lambda file_name: os.path.join(abs_path, file_name),
+                                 os.listdir(unicode(abs_path)))
 
     dirs_on_dir = filter(lambda dir_path: os.path.isdir(dir_path), files_and_dirs_on_dir)
     files_on_dir = filter(lambda file_path: not os.path.isdir(file_path), files_and_dirs_on_dir)
     dirs_on_dir = map(lambda dir: os.path.basename(dir), dirs_on_dir)
     files_on_dir = map(lambda file: os.path.basename(file), files_on_dir)
 
-    data_socket.send(';;;'.join([','.join(files_on_dir), ','.join(dirs_on_dir)]))
+    data_socket.send(';;;'.join([','.join(files_on_dir), ','.join(dirs_on_dir)]).encode('utf8'))
     return "212 Directory sent Ok."

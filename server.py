@@ -64,7 +64,7 @@ def handle_connection(sock, addr, ftp_server):
 
         except (ValueError, sqlite.Error):
             traceback.print_exc()
-            print ('Unexpected error')
+            print 'Unexpected error'
             sock.send('Unexpected error')
         except socket.error as e:
             # Client closed program with ctrl+c
@@ -92,14 +92,12 @@ def create_db():
         db_file = open('server.db', 'r')
         db_file.close()
         db = sqlite.connect('server.db', check_same_thread=False)
-        db.text_factory = str
     except IOError:
         print "Database does not found, creating it..."
         # file does not exist
         db_file = open('server.db', 'w')
         db_file.close()
         db = sqlite.connect('server.db', check_same_thread=False)
-        db.text_factory = str
         cursor = db.cursor()
         # enable foreign_keys contrain with sqlite
         cursor.execute('''PRAGMA foreign_keys = ON;''')

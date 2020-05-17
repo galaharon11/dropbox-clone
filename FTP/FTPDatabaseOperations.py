@@ -66,8 +66,7 @@ def get_all_files_associated_with_user(server_db, user_id, permission_filter=0, 
 
     file_ids = [str(q[0]) for q in queries]
     cursor.execute('''SELECT file_path FROM files WHERE file_id IN ({0})'''.format(','.join(file_ids)))
-    a = cursor.fetchall()
-    return [query[0] for query in a]
+    return [query[0] for query in cursor.fetchall()]
 
 def check_permissions(server_db, file_path, user_id, permission=OWNER):
     """

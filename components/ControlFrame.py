@@ -56,7 +56,7 @@ class ControlFrame(tk.Frame):
         """
         mode is one of the following strings:
         'default' - Default state. 'Upload a file' and 'Add new directory' both active.
-        'shared' - Shared files - Same as default but 'Upload a file' button is disabled.
+        'shared' - Shared files - Same as default but 'Upload a file' and 'Add new directory' buttons are disabled.
         'group' - Group files - Same as default but 'Manage group' button is added.
         """
         self.upload_file_button.pack_forget()
@@ -72,6 +72,7 @@ class ControlFrame(tk.Frame):
 
         state = 'disabled' if mode == 'shared' else 'normal'
         self.upload_file_button.configure(state=state)
+        self.add_dir_button.configure(state=state)
 
     def __init__(self, parent, file_display, ui_operations):
         tk.Frame.__init__(self, parent)
