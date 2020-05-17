@@ -66,9 +66,6 @@ class ShareDialog(tk.Toplevel):
         self.permission_edit = tk.Checkbutton(self, font=text_font, text='Edit it',
                                variable=self.permission_edit_var, onvalue=DIR_EDIT, offvalue=0)
         self.permission_rename.grid(row=7, column=0, padx=20, sticky='w')
-        if is_dir:
-            self.permission_edit.grid(row=8, column=0, padx=20, sticky='w',
-                                    variable=self.permission_download_var)
 
         self.send_button = tk.Button(self, font=text_font, text='share', command=self.button_pressed)
-        self.send_button.grid(row=9, column=0, columnspan=2, pady=(5,15))
+        self.send_button.grid(row=8, column=0, columnspan=2, pady=(5,15))

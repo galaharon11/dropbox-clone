@@ -2,6 +2,7 @@ import tkFileDialog, tkMessageBox
 import os
 import threading
 import Queue
+import time
 
 from internet_operations import upload_file, download_file, list_dir
 from components.ProgressBar import ProgressBar
@@ -48,11 +49,12 @@ class UIOperations(object):
         self.ftp_control_sock.send(command)
         return self.ftp_control_sock.recv(1024)
 
-    def destroy_progressbar(self, error_msg, show_message_box=True):
+    def destroy_progressbar(self, error_msg, show_message_box=True, refresh_when_finish=True):
         mode = self.progress_bar.mode
         self.progress_bar.destroy()
         if error_msg.startswith('2'):  # 2xx errno is success
-            self.refresh()
+            if refresh_when_finish:
+                self.refresh()
             if show_message_box:
                 tkMessageBox.showinfo(title='Success', message='File {0}ed successfully'.format(mode))
             if self.do_func_when_finish:
@@ -65,29 +67,33 @@ class UIOperations(object):
                                                           'Please delete the file on server, change its name or upload'
                                                           'the file on a different directory')
 
-    def check_if_thread_finished(self, show_message_box):
+    def check_if_thread_finished(self, show_message_box, refresh_when_finish=True):
         if not self.msg_queue.empty():
             msg = self.msg_queue.get_nowait()
             if msg.startswith('bytes'):
                 self.progress_bar.set_byte_coutner(int(msg[msg.find(' ') + 1:]))
                 self.master_window.after_cancel(self.after_instance)
-                self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
+                self.after_instance = self.master_window.after(100, lambda:
+                         self.check_if_thread_finished(show_message_box, refresh_when_finish=refresh_when_finish))
                 while not self.msg_queue.empty():
                     msg = self.msg_queue.get_nowait()
                     if not msg.startswith('bytes'):
-                        self.destroy_progressbar(msg, show_message_box)
+                        self.destroy_progressbar(msg, show_message_box, refresh_when_finish=refresh_when_finish)
                         self.download_completed = True
                         return
             else:
-                self.destroy_progressbar(msg, show_message_box)
+                self.destroy_progressbar(msg, show_message_box, refresh_when_finish=refresh_when_finish)
                 self.download_completed = True
 
         if not self.download_completed:
-            self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
+            self.after_instance = self.master_window.after(100, lambda:
+                    self.check_if_thread_finished(show_message_box, refresh_when_finish=refresh_when_finish))
 
-    def download_from_current_server_path(self, file_name_on_server, file_path_on_client='',
+    def download_from_current_server_path(self, file_name_on_server, file_path_on_client, is_dir=False,
                                           do_func_when_finish=None, show_message_box=True):
+        file_path_on_client = file_path_on_client.replace('/','\\')
         file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
+
         self.do_func_when_finish = do_func_when_finish
         self.download_completed = False
         self.msg_queue = Queue.Queue()
@@ -96,7 +102,8 @@ class UIOperations(object):
         download_thread = threading.Thread(target=download_file.download_file_by_path, args=(file_path_on_server,
                                 file_path_on_client, self.ftp_control_sock, self.session_id,
                                 self.server_ip, self.progress_bar, self.msg_queue, self.current_group))
-        self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box))
+        self.after_instance = self.master_window.after(100, lambda: self.check_if_thread_finished(show_message_box,
+                                                                    refresh_when_finish=False))
         download_thread.start()
 
 
@@ -170,6 +177,24 @@ class UIOperations(object):
     def list_files_in_current_dir(self):
         return list_dir.list_directory_by_path(self.current_server_path, self.session_id,
                                                self.ftp_control_sock, self.server_ip, self.current_group)
+
+    def recursive_list(self, directory):
+        """
+        The function will iterate recursively and return a touple that contains a list of directories as first element
+        and a list of files as second element.
+        """
+        file_list = []
+        dir_list = []
+        self._recursive_list(os.path.join(self.current_server_path, directory), file_list, dir_list)
+        return dir_list, file_list
+
+    def _recursive_list(self, path, file_list, dir_list):
+        files, dirs = list_dir.list_directory_by_path(path, self.session_id,
+                                                      self.ftp_control_sock, self.server_ip, self.current_group)
+        file_list += map(lambda f: os.path.join(path, f), files)
+        dir_list += map(lambda d: os.path.join(path, d), dirs)
+        for directory in dirs:
+            self._recursive_list(os.path.join(path, directory), file_list, dir_list)
 
     def share_file_from_current_dir(self, file_name, user_name, permissions):
         error_msg = self.send_command(False, 'SHAR', os.path.join(self.current_server_path, file_name),

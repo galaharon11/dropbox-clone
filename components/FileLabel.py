@@ -41,7 +41,7 @@ class FileLabel(tk.Label):
                 tmp_file_path = os.path.join(tmp_dir, tmp_file_name)
                 open(tmp_file_path, 'w').close()  # Create temp file
                 self.ui_operations.download_from_current_server_path(self.file_name,
-                    file_path_on_client=tmp_file_path, do_func_when_finish=lambda: self.start_file(tmp_file_path))
+                    tmp_file_path, do_func_when_finish=lambda: self.start_file(tmp_file_path))
             else:
                 self.ui_operations.change_directory(self.file_name)
 
@@ -103,8 +103,9 @@ class FileLabel(tk.Label):
         self.popup_menu.add_command(label="Open", command=self.file_open)
         self.popup_menu.add_command(label="Download", command=self.file_view_parent.download_marked_files)
         self.popup_menu.add_command(label="Rename", command=self.rename_file)
-        self.popup_menu.add_separator()
-        self.popup_menu.add_command(label="Share", command=self.share_file)
+        if not self.is_dir:
+            self.popup_menu.add_separator()
+            self.popup_menu.add_command(label="Share", command=self.share_file)
         self.popup_menu.add_separator()
         self.popup_menu.add_command(label="Delete", command=self.file_view_parent.remove_marked_files)
         self.bind("<Button-3>", lambda event: self.popup_menu_show(event))

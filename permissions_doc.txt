@@ -8,10 +8,3 @@ File+directory permissions:
     bit 3: Delete bit - The user can delete this file/directory.
     bit 4: Rename bit - The user can rename this file/directory.
     bit 5: Share bit - The user can share this file/directory.
-
-Directory permissions:
-    bit 6: Directory bit: Indicates that this 'file' is a directory.
-    bit 7: Directory edit: The user can add/remove/change files in this directory. He won't be able to remove
-                           the directory without the delete bit (bit 3)
-
-bit 8 (MSB): Unused
