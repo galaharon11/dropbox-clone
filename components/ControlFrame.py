@@ -3,6 +3,8 @@ import tkSimpleDialog
 from PIL import Image, ImageTk
 import os
 
+from ManageGroupWindow import ManageGroupWindow
+
 
 class ControlFrame(tk.Frame):
     def set_path(self, path):
@@ -49,12 +51,30 @@ class ControlFrame(tk.Frame):
         if dir_name:
             self.ui_operations.add_directory_from_current_directory(dir_name)
 
-    def set_upload_file_button(self, mode):
+    def manage_group(self):
+        ManageGroupWindow(self.parent, self.ui_operations)
+
+    def set_mode(self, mode):
         """
-        Mode is a boolean argument. False will disable the file button and True will enable it.
+        mode is one of the following strings:
+        'default' - Default state. 'Upload a file' and 'Add new directory' both active.
+        'shared' - Shared files - Same as default but 'Upload a file' and 'Add new directory' buttons are disabled.
+        'group' - Group files - Same as default but 'Manage group' button is added.
         """
-        state = 'normal' if mode else 'disabled'
+        self.upload_file_button.pack_forget()
+        self.add_dir_button.pack_forget()
+        self.manage_group_button.pack_forget()
+        if mode == 'group':
+            self.upload_file_button.pack(side='left', padx=70)
+            self.add_dir_button.pack(side='left', padx=70)
+            self.manage_group_button.pack(side='right', padx=70)
+        else:
+            self.upload_file_button.pack(side='right', padx=100)
+            self.add_dir_button.pack(side='left', padx=100)
+
+        state = 'disabled' if mode == 'shared' else 'normal'
         self.upload_file_button.configure(state=state)
+        self.add_dir_button.configure(state=state)
 
     def __init__(self, parent, file_display, ui_operations):
         tk.Frame.__init__(self, parent)
@@ -82,12 +102,15 @@ class ControlFrame(tk.Frame):
         self.return_button.pack(side='left', padx=(0, 10))
         self.addr_frame.pack(side='top', expand=True, fill='both')
 
-        self.upload_frame = tk.Frame(self)
-        self.upload_file_button = tk.Button(self.upload_frame, text='Upload a file',
+        self.operations_frame = tk.Frame(self)
+        self.upload_file_button = tk.Button(self.operations_frame, text='Upload a file',
                                          command=self.ui_operations.upload_from_current_server_path)
         self.upload_file_button.pack(side='right', padx=100)
-        self.add_dir_button = tk.Button(self.upload_frame, text='Add new directory',
+        self.add_dir_button = tk.Button(self.operations_frame, text='Add new directory',
                                         command=self.add_dir_dialog)
         self.add_dir_button.pack(side='left', padx=100)
 
-        self.upload_frame.pack(side='bottom', pady=10, expand=True)
+        self.operations_frame.pack(side='bottom', pady=10, expand=True)
+
+        self.manage_group_button = tk.Button(self.operations_frame, text='Manage group',
+                                             command=self.manage_group)

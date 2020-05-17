@@ -29,24 +29,34 @@ class UIOperations(object):
 
         self.refresh()
 
-    def refresh(self):
-        if self.file_display:
+    def refresh(self, change_to_my_files=False):
+        if self.file_display and self.control_frame and self.groups_view:
+            self.groups_view.refresh()
+            if change_to_my_files:
+                self.set_partitaion('My files')
+                # return because self.set_partitaion will eventually call refresh with change_to_my_files=False
+                return
             self.file_display.refresh_display()
             self.control_frame.set_path(self.current_server_path.replace('\\','/'))
-            self.control_frame.set_upload_file_button(self.current_group != 'SHARED')
+            if self.current_group == '':
+                self.control_frame.set_mode('default')
+            elif self.current_group == 'SHARED':
+                self.control_frame.set_mode('shared')
+            else:
+                self.control_frame.set_mode('group')
             # Sometimes this funtions sets focus for other widgets
             self.master_window.focus_set()
 
     def send_command(self, is_group_command, command_name, *params):
         """
         Sends a command to the ftp server.
-        :returns: the error string received from the server after sending the command.
+        returns the error string received from the server after sending the command.
         """
         if self.current_group and not is_group_command:
             # Group commands does not accept group parameter.
             params = params + (self.current_group,)
         command = ' '.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
-        self.ftp_control_sock.send(command)
+        self.ftp_control_sock.send(command.encode('utf8'))
         return self.ftp_control_sock.recv(1024)
 
     def destroy_progressbar(self, error_msg, show_message_box=True, refresh_when_finish=True):
@@ -123,7 +133,7 @@ class UIOperations(object):
             upload_thread.start()
 
     def add_directory_from_current_directory(self, dir_name):
-        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name).encode('utf8'))
+        error_msg = self.send_command(False, 'MKD', os.path.join(self.current_server_path, dir_name))
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         else:
@@ -214,7 +224,6 @@ class UIOperations(object):
     def group_get(self):
         msg = self.send_command(True, 'GROUP', 'GET')
         if msg.startswith('2'):
-            print msg
             if len(msg) == 3:
                 return []
             elif ',' in msg:
@@ -243,3 +252,29 @@ class UIOperations(object):
         else:
             tkMessageBox.showerror(title='Error', message='You are in group "{0}" already.'.format(group_name))
             return False
+
+    def remove_user_from_group(self, group_name, user_name):
+        msg = self.send_command(True, 'GROUP', 'REMOVE', group_name, user_name)
+        if msg.startswith('2'):
+            tkMessageBox.showinfo(title='Success', message='The user was removed successfully.')
+
+    def remove_this_user_from_group(self, group_name):
+        msg = self.send_command(True, 'GROUP', 'REMOVE', group_name, self.user_name)
+        if msg.startswith('2'):
+            tkMessageBox.showinfo(title='Success', message='You left the group.')
+
+    def delete_group(self, group_name):
+        msg = self.send_command(True, 'GROUP', 'DELETE', group_name)
+        if msg.startswith('2'):
+            tkMessageBox.showinfo(title='Success', message='Group deleted.')
+
+    def get_users_in_group(self, group_name):
+        msg = self.send_command(True, 'GROUP', 'LIST', group_name)
+        print msg
+        if msg.startswith('2'):
+            if len(msg) == 3:
+                return []
+            elif ',' in msg:
+                return msg[4:].split(',')
+            else:
+                return [msg[4:]]

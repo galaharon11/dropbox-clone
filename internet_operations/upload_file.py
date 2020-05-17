@@ -12,8 +12,7 @@ def _close_connection(data_sock, file_to_upload, queue, control_sock, err_msg):
     if err_msg:
         queue.put_nowait(err_msg)
     else:
-        a = control_sock.recv(1024)
-        queue.put_nowait(a)
+        queue.put_nowait(control_sock.recv(1024))
 
 
 def upload_file_by_path(file_path, server_path, control_sock, session_id, server_ip, progressbar, queue, group=''):

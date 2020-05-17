@@ -1,4 +1,4 @@
-from sqlite3 import IntegrityError
+import sqlite3 as lite
 
 from PermissionsConsts import *
 import FTPExceptions
@@ -66,8 +66,7 @@ def get_all_files_associated_with_user(server_db, user_id, permission_filter=0, 
 
     file_ids = [str(q[0]) for q in queries]
     cursor.execute('''SELECT file_path FROM files WHERE file_id IN ({0})'''.format(','.join(file_ids)))
-    a = cursor.fetchall()
-    return [query[0] for query in a]
+    return [query[0] for query in cursor.fetchall()]
 
 def check_permissions(server_db, file_path, user_id, permission=OWNER):
     """
@@ -101,7 +100,7 @@ def create_group(server_db, group_name, group_password, user_id):
 
         cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, OWNER))
         server_db.commit()
-    except IntegrityError as e:
+    except lite.IntegrityError as e:
         print str(e)
         return False
     return True
@@ -145,7 +144,6 @@ def get_group_id_if_user_in_group(server_db, group_name, user_id):
     cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
     group_id = cursor.fetchone()
     if not group_id:
-        print group_name, 'group_name invalid'
         return False
     group_id = int(group_id[0])
     cursor.execute('''SELECT user_id FROM users_groups WHERE group_id=?''', (group_id,))
@@ -153,5 +151,42 @@ def get_group_id_if_user_in_group(server_db, group_name, user_id):
     if user_id in users_in_group:
         return group_id
     else:
-        print group_name, 'user not in this group'
+        return False
+
+def get_users_in_group(server_db, group_name):
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
+    group_id = int(cursor.fetchone()[0])
+    cursor.execute('''SELECT user_id FROM users_groups WHERE group_id=?''', (group_id,))
+    users_ids = map(lambda x: str(x[0]), cursor.fetchall())
+    cursor.execute('''SELECT username FROM users WHERE user_id IN ({0})'''.format(','.join(users_ids)))
+    return map(lambda x: x[0], cursor.fetchall())
+
+def remove_user_from_group(server_db, group_name, user_name):
+    try:
+        cursor = server_db.cursor()
+        cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
+        group_id = int(cursor.fetchone()[0])
+        print user_name
+        cursor.execute('''SELECT user_id FROM users WHERE username=?''', (user_name,))
+        user_id = int(cursor.fetchone()[0])
+        cursor.execute('''DELETE FROM users_groups WHERE user_id=? AND group_id=?''', (user_id, group_id))
+        server_db.commit()
+        return True
+    except lite.Error, TypeError:
+        return False
+
+def delete_group(server_db, group_name):
+    try:
+        cursor = server_db.cursor()
+        cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
+        group_id = int(cursor.fetchone()[0])
+        print 'group_id', group_id
+        cursor.execute('''DELETE FROM users_groups WHERE group_id=?''', (group_id,))
+        cursor.execute('''DELETE FROM files WHERE group_id=?''', (group_id,))
+        cursor.execute('''DELETE FROM groups WHERE group_id=?''', (group_id,))
+        server_db.commit()
+        return True
+    except (lite.Error, TypeError) as e:
+        print e
         return False
