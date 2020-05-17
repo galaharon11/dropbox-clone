@@ -142,11 +142,11 @@ class FileDisplay(tk.Canvas):
             os.makedirs(os.path.join(path_to_dir, d))
         if files:
             files = map(lambda f: f[1:], files)
-            #print path_on_client, files
             f = files.pop()
-            file_path = os.path.join(os.path.dirname(path_on_client), f)
-            print file_path, f
-            print
+            file_path = os.path.join(path_on_client, f)
+        #path = os.path.dirname(path_on_client)
+        #return {f: path for f in files}
+
             self.ui_operations.download_from_current_server_path(f,
                                file_path, show_message_box=False)
             self.after_instance = self.after(100, lambda:
@@ -166,10 +166,11 @@ class FileDisplay(tk.Canvas):
                 labels = list(set(self.marked_labels) - set(ignored_files))
 
                 if labels:
+                    files = {}
                     label = labels.pop()
                     print label, label.is_dir
                     if label.is_dir:
-                        self.download_dir(path, label.file_name)
+                        files += self.download_dir(path, label.file_name)
                     else:
                         path_to_file = os.path.join(path, label.file_name)
                         self.ui_operations.download_from_current_server_path(label.file_name,
@@ -185,7 +186,7 @@ class FileDisplay(tk.Canvas):
                                                   title='Save file')
             if path:
                 if self.marked_labels[0].is_dir:
-                    self.download_dir(path, self.marked_labels[0].file_name)
+                    self.download_dir(os.dirname(path), self.marked_labels[0].file_name)
                 else:
                     self.ui_operations.download_from_current_server_path(self.marked_labels[0].file_name,
                                                                     path, is_dir=self.marked_labels[0].is_dir)

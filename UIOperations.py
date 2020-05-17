@@ -91,20 +91,6 @@ class UIOperations(object):
         file_path_on_client = file_path_on_client.replace('/','\\')
         file_path_on_server = os.path.join(self.current_server_path, file_name_on_server)
 
-        '''if is_dir:
-            os.mkdir(file_path_on_client)
-            dirs, files = self.recursive_list(file_name_on_server)
-            print dirs, files
-            for d in dirs:
-                d = d.replace('\\','/')
-                d = os.path.relpath(d, '/' + os.path.basename(file_path_on_client))
-                os.makedirs(os.path.join(file_path_on_client, d))
-            for f in files:
-                if self.download_completed:
-                    file_path = os.path.join(os.path.dirname(file_path_on_client), f[1:])
-                    self.download_from_current_server_path(f, file_path, is_dir=False,
-                                        do_func_when_finish=do_func_when_finish, show_message_box=False)
-        else:'''
         self.do_func_when_finish = do_func_when_finish
         self.download_completed = False
         self.msg_queue = Queue.Queue()
