@@ -40,7 +40,6 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
         try:
             if file_size == 0:
                 file_size = int(data_sock.recv(1024))
-                print file_size
                 progressbar.update_file_size(file_size)
             data = data_sock.recv(1024)
             if not data:

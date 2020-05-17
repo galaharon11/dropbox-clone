@@ -5,7 +5,6 @@ def passive_connect(control_sock, server_ip):
     control_sock.send('PASV')
     data_port = control_sock.recv(1024)
     if not data_port.startswith('227'):
-        print data_port
         raise Exception  # TODO: cahange this
 
     data_port = int(data_port[data_port.find('PORT ') + 5:])

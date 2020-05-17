@@ -33,7 +33,12 @@ class UIOperations(object):
         if self.file_display:
             self.file_display.refresh_display()
             self.control_frame.set_path(self.current_server_path.replace('\\','/'))
-            self.control_frame.set_upload_file_button(self.current_group != 'SHARED')
+            if self.current_group == '':
+                self.control_frame.set_mode('default')
+            elif self.current_group == 'SHARED':
+                self.control_frame.set_mode('shared')
+            else:
+                self.control_frame.set_mode('group')
             # Sometimes this funtions sets focus for other widgets
             self.master_window.focus_set()
 

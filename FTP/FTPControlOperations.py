@@ -33,7 +33,6 @@ def get_file_from_group_and_check_permission(group, relative_path, server_db, us
 
     else:
         group_id = FTPDatabaseOperations.get_group_id_if_user_in_group(server_db, group, user_id)
-        #TODO: check for group permissions
         if group_id:
             abs_path = os.path.join(path_to_files, 'g' + str(group_id), relative_path[1:])
         else:
@@ -144,10 +143,16 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, comple
 def mkdir(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Create a directory in the server.
-    MKD stntax: MKD dir_path SESSIONID=sessionid
+    MKD stntax: MKD dir_path group(optional) SESSIONID=sessionid
     """
-    relative_path = params[0]
-    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+    if len(params) == 2:
+        relative_path, group = params
+        group_id = FTPDatabaseOperations.get_group_id_if_user_in_group(server_db, group, user_id)
+        abs_path = os.path.join(path_to_files, 'g' + str(group_id), relative_path[1:])
+    else:
+        relative_path, group = params[0], ''
+        abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+
     if os.path.exists(abs_path):
         raise FTPExceptions.FileAlreadyExists
     else:
@@ -158,10 +163,16 @@ def mkdir(params, user_id, path_to_files, server_db, command_queue, completion_q
 def rmdir(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Remove a directory on server
-    RMD stntax: RMD dir_path SESSIONID=sessionid
+    RMD stntax: RMD dir_path group(optional) SESSIONID=sessionid
     """
-    relative_path = params[0]
-    abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+    if len(params) == 2:
+        relative_path, group = params
+        group_id = FTPDatabaseOperations.get_group_id_if_user_in_group(server_db, group, user_id)
+        abs_path = os.path.join(path_to_files, 'g' + str(group_id), relative_path[1:])
+    else:
+        relative_path, group = params[0], ''
+        abs_path = os.path.join(path_to_files, str(user_id), relative_path[1:])
+
     if os.path.exists(abs_path):
         for directory in os.walk(abs_path, topdown=False):  # Iterate directory recursively
             for file_path in directory[2]:
@@ -171,6 +182,7 @@ def rmdir(params, user_id, path_to_files, server_db, command_queue, completion_q
         rmtree(abs_path)  # delete directory recursively
         completion_queue.put_nowait('212 Directory deleted.')
     else:
+        print abs_path
         raise FTPExceptions.FileDoesNotExists
 
 
