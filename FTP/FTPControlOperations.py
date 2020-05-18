@@ -53,7 +53,6 @@ def append_file(params, user_id, path_to_files, server_db, command_queue, comple
 
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, 0, path_to_files)
-    print 'control: ', abs_path
     if group:
         command_queue.put_nowait(' '.join(['APPE', abs_path, group, 'USERID=' + str(user_id)]))
     else:
@@ -182,7 +181,6 @@ def rmdir(params, user_id, path_to_files, server_db, command_queue, completion_q
         rmtree(abs_path)  # delete directory recursively
         completion_queue.put_nowait('212 Directory deleted.')
     else:
-        print abs_path
         raise FTPExceptions.FileDoesNotExists
 
 
@@ -252,7 +250,9 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
                   'DELETE': GroupOperations.group_delete,
                   'REMOVE': GroupOperations.group_remove }
 
-    if len(params) >= 3:
+    if params[0] == 'DELETE':
+        completion_queue.put_nowait(operations[params[0]](params[1], server_db, user_id, path_to_files))
+    elif len(params) >= 3:
         completion_queue.put_nowait(operations[params[0]](params[1], params[2], server_db, user_id))
     elif len(params) == 2:
         completion_queue.put_nowait(operations[params[0]](params[1], server_db, user_id))

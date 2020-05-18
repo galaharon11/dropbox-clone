@@ -61,21 +61,29 @@ class FTPServer(threading.Thread):
                 pass
 
             command = command_queue.get_nowait()
-            print command
             operation = data_fucntions[command[:command.find(' ')]]
             user_id = int(command[command.find('USERID=') + 7:])
             params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
             try:
-                print 'data params', params
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
                 completion_queue.put_nowait(succes_code)
+
+                if operation == FTPDataOperations.get_file:
+                    self.logger.add_file_log('User {0} downloaded file in path {1}.', user_id, params[0])
+                elif operation == FTPDataOperations.append_file:
+                    self.logger.add_file_log('User {0} uploaded file to path {1}.', user_id, params[0])
+
             except FTPExceptions.FTPException as e:
-                print str(e)
+                try:
+                    # user_id may be invalid
+                    self.logger.add_error_log(str(e) + ". User: {0}.", user_id)
+                except NameError:
+                    pass
                 completion_queue.put_nowait(str(e))
 
     def handle_ftp_control(self, control_sock):
         """
-        Implemnts an FTP passive protocol
+        Implemnts an FTP passive protocol.
         """
         control_fucntions = {'APPE': FTPControlOperations.append_file,
                              'GET' : FTPControlOperations.get_file,
@@ -90,7 +98,6 @@ class FTPServer(threading.Thread):
         while True:
             try:
                 command = control_sock.recv(1024).decode('utf8')
-                print command
                 if command == 'PASV':
                     # Create a command queue to 'share' data between control thread (this thread) to the data thread
                     command_queue = Queue()
@@ -116,23 +123,30 @@ class FTPServer(threading.Thread):
 
                 operation = control_fucntions[command[:command.find(' ')]]
                 params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
-                print 'control params', params
                 operation(params, user_id, self.path_to_files, self.server_db, command_queue, completion_queue)
+
+                if operation == FTPControlOperations.group_operations:
+                    if params[0] == 'CREATE':
+                        self.logger.add_group_log('Group {0} created.', params[1])
+                    if params[0] == 'DELETE':
+                        self.logger.add_group_log('Group {0} deleted.', params[1])
 
                 while completion_queue.empty():
                     pass
 
                 control_sock.send(completion_queue.get_nowait())
-
             except FTPExceptions.FTPException as e:
-                print 'catched:', str(e)
+                try:
+                    # user_id may be invalid
+                    self.logger.add_error_log(str(e) + '. User: {0}.', user_id)
+                except NameError:
+                    pass
                 control_sock.send(str(e))
 
             except KeyError:
                 control_sock.send('502 not implemented')
 
             except ValueError:
-                traceback.print_exc()
                 control_sock.send('501 Syntax error in parameters or arguments')
 
             except socket.error as e:
@@ -145,12 +159,14 @@ class FTPServer(threading.Thread):
             client_control_thread.daemon = True
             client_control_thread.start()
 
-    def __init__(self, server_ip, server_db):
+    def __init__(self, server_ip, server_db, logger):
         threading.Thread.__init__(self, target=self.handle_new_control_connection, args=())
         self.daemon = True
 
         self.ip = server_ip
         self.server_db = server_db
+
+        self.logger = logger
 
         self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # 21 is ftp contorl port

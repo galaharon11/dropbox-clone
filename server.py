@@ -1,10 +1,11 @@
 import socket
 import sqlite3 as sqlite
 import threading
-import traceback
 import sys, os
 
 from FTP.FTPServer import FTPServer
+from logger.Logger import Logger
+
 
 server_ip = "10.100.102.15"
 PORT = 10054
@@ -12,11 +13,10 @@ sessions_id_list = {}
 db = None
 
 
-def handle_connection(sock, addr, ftp_server):
+def handle_connection(sock, addr, ftp_server, logger):
     while True:
         try:
             data = sock.recv(1024)
-            print data
             if not data:
                 sock.close()
                 return
@@ -27,6 +27,7 @@ def handle_connection(sock, addr, ftp_server):
                     raise ValueError
                 username = data[1]
                 password = data[2]
+                register = False
 
             elif data.startswith("register;"):
                 # TODO: User cant use ; on username
@@ -37,19 +38,23 @@ def handle_connection(sock, addr, ftp_server):
                 username = data[2]
                 password = data[3]
                 register_user(name, username, password)
+                register = True
 
             elif data == 'quit':
                 sock.close()
                 return
             else:
-                print data
                 raise ValueError
 
             user = login_user(username, password)
             if not user:
                 raise AttributeError
 
-            print 'User login', user
+            if register:
+                logger.add_user_log('User {0} register.', user[0])
+            else:
+                logger.add_user_log('user {0} login.', user[0])
+
             sock.send('success')
 
             session_id = ftp_server.add_session_id(user[0])
@@ -59,12 +64,11 @@ def handle_connection(sock, addr, ftp_server):
 
         except sqlite.IntegrityError:
             sock.send('Username already taken')
-        except AttributeError:
+        except AttributeError as e:
             sock.send('Username or password are incorrect')
-
-        except (ValueError, sqlite.Error):
-            traceback.print_exc()
+        except ValueError, sqlite.Error:
             print 'Unexpected error'
+            logger.add_error_log('Unexpected error.')
             sock.send('Unexpected error')
         except socket.error as e:
             # Client closed program with ctrl+c
@@ -139,6 +143,11 @@ def create_db():
                         FOREIGN KEY(user_id) REFERENCES users (user_id),
                         FOREIGN KEY(group_id) REFERENCES groups (group_id) )''')
 
+        cursor.execute('''CREATE TABLE logger (
+                        type TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        timestemp INTEGER NOT NULL )''')
+
         db.commit()
         print "Database created."
 
@@ -147,7 +156,8 @@ def main():
     global login_socket
 
     create_db()
-    ftp_server = FTPServer(server_ip, db)
+    logger = Logger(db)
+    ftp_server = FTPServer(server_ip, db, logger)
 
     login_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     login_socket.bind((server_ip, PORT))
@@ -158,7 +168,7 @@ def main():
     while True:
         try:
             clientsock, client_addr = login_socket.accept()
-            thread = threading.Thread(target=handle_connection, args=(clientsock, client_addr, ftp_server))
+            thread = threading.Thread(target=handle_connection, args=(clientsock, client_addr, ftp_server, logger))
             thread.daemon = True  # Exit thread when program ends
             thread.start()
         except socket.timeout:

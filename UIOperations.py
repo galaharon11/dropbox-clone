@@ -163,7 +163,6 @@ class UIOperations(object):
     def rename_file_in_current_path(self, file_name, new_file_name):
         error_msg = self.send_command(False, 'RNTO', os.path.join(self.current_server_path, file_name),
                                               os.path.join(self.current_server_path, new_file_name))
-        print error_msg
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
@@ -209,7 +208,6 @@ class UIOperations(object):
     def share_file_from_current_dir(self, file_name, user_name, permissions):
         error_msg = self.send_command(False, 'SHAR', os.path.join(self.current_server_path, file_name),
                                       user_name, str(permissions))
-        print error_msg
         if error_msg.startswith('2'):  # 2xx errno is success
             tkMessageBox.showinfo(title='Success', message='File shared successfully')
             self.refresh()
@@ -270,7 +268,6 @@ class UIOperations(object):
 
     def get_users_in_group(self, group_name):
         msg = self.send_command(True, 'GROUP', 'LIST', group_name)
-        print msg
         if msg.startswith('2'):
             if len(msg) == 3:
                 return []

@@ -3,6 +3,13 @@ import sqlite3 as lite
 from PermissionsConsts import *
 import FTPExceptions
 
+def get_username_for_id(server_db, user_id):
+    """
+    Retrun a username for a given user_id.
+    """
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT username FROM users WHERE user_id=?''', (user_id,))
+    return cursor.fetchone()[0]
 
 def add_user_to_file_db(server_db, file_path, user_name, permissions=0):
     cursor = server_db.cursor()
@@ -23,9 +30,7 @@ def add_user_to_file_db(server_db, file_path, user_name, permissions=0):
 def add_file_to_db(server_db, file_path, user_id, is_dir=False, group='', permissions=OWNER):
     cursor = server_db.cursor()
     if group:
-        print 'group', group
         group_id = get_group_id_if_user_in_group(server_db, group, int(user_id))
-        print 'id', group_id
         if group_id:
             cursor.execute('''INSERT INTO files VALUES (null, ?, ?, ?)''', (file_path, is_dir, group_id))
         else:
@@ -58,10 +63,8 @@ def get_all_files_associated_with_user(server_db, user_id, permission_filter=0, 
     cursor = server_db.cursor()
     cursor.execute('''SELECT file_id, permissions FROM users_files WHERE user_id=?''', (user_id,))
     queries = set(cursor.fetchall())
-    print queries
     if permission_filter:
         filtered = set(filter(lambda query: (query[1] & permission_filter) != 0, queries))
-        print filtered, permission_filter
         queries = queries - filtered if reverse_filter else filtered
 
     file_ids = [str(q[0]) for q in queries]
@@ -110,7 +113,6 @@ def get_user_groups(server_db, user_id):
     cursor.execute('''SELECT group_id FROM users_groups WHERE user_id=?''', (user_id,))
     group_ids = cursor.fetchall()
     group_ids = map(lambda x: str(x[0]), group_ids)
-    print ','.join(group_ids)
     cursor.execute('''SELECT group_name FROM groups WHERE group_id IN ({0})'''.format(','.join(group_ids)))
     group_names = cursor.fetchall()
     if group_names:
@@ -167,7 +169,6 @@ def remove_user_from_group(server_db, group_name, user_name):
         cursor = server_db.cursor()
         cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
         group_id = int(cursor.fetchone()[0])
-        print user_name
         cursor.execute('''SELECT user_id FROM users WHERE username=?''', (user_name,))
         user_id = int(cursor.fetchone()[0])
         cursor.execute('''DELETE FROM users_groups WHERE user_id=? AND group_id=?''', (user_id, group_id))
@@ -181,12 +182,11 @@ def delete_group(server_db, group_name):
         cursor = server_db.cursor()
         cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
         group_id = int(cursor.fetchone()[0])
-        print 'group_id', group_id
         cursor.execute('''DELETE FROM users_groups WHERE group_id=?''', (group_id,))
         cursor.execute('''DELETE FROM files WHERE group_id=?''', (group_id,))
         cursor.execute('''DELETE FROM groups WHERE group_id=?''', (group_id,))
         server_db.commit()
         return True
     except (lite.Error, TypeError) as e:
-        print e
+        print str(e)
         return False
