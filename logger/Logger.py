@@ -73,14 +73,14 @@ class Logger(object):
         username = get_username_for_id(self.server_db, user_id)
         Log('user', message, self.server_db, username=username)
 
-    def get_logs(self, n=30, operation_type=''):
+    def get_logs(self, n=30, operation_type='user'):
         """
         Get the 'n' latest logs (default 30 logs) of type 'operation_type'. 'operation_type' can be
         one of the strings 'file', 'user', 'group', 'error'. Returns a list of touples: [(log_message1, log_time1),
         (log_message2, log_time2)...]
         """
         cursor = self.server_db.cursor()
-        cursor.execute('''SELECT (message, datetime(timestemp, 'unixepoch')) FROM logger WHERE type=?
-                          ORDERBY timestemp LIMIT ?''', (operation_type, n))
+        cursor.execute('''SELECT message, datetime(timestemp, 'unixepoch') FROM logger WHERE type=?
+                          ORDER BY timestemp ASC LIMIT ?''', (operation_type, str(n)))
 
         return cursor.fetchall()

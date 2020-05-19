@@ -5,12 +5,30 @@ import sys, os
 
 from FTP.FTPServer import FTPServer
 from logger.Logger import Logger
+from admin.AdminWindow import AdminWindow
 
 
 server_ip = "10.100.102.15"
 PORT = 10054
 sessions_id_list = {}
 db = None
+logger = None
+
+def handle_admin(path_to_files):
+    try:
+        while True:
+            print 'Enter \'admin\' to access admin mode or \'quit\' to stop the server.'
+            command = raw_input('> ')
+            if command == 'admin':
+                AdminWindow(db, logger, path_to_files)
+            elif command == 'quit':
+                os._exit(0)
+            else:
+                print 'Unknown command.'
+
+    except EOFError, IOError:
+        # Admin ctrl-z
+        pass
 
 
 def handle_connection(sock, addr, ftp_server, logger):
@@ -53,7 +71,7 @@ def handle_connection(sock, addr, ftp_server, logger):
             if register:
                 logger.add_user_log('User {0} register.', user[0])
             else:
-                logger.add_user_log('user {0} login.', user[0])
+                logger.add_user_log('User {0} login.', user[0])
 
             sock.send('success')
 
@@ -153,10 +171,11 @@ def create_db():
 
 
 def main():
-    global login_socket
+    global login_socket, logger
 
     create_db()
     logger = Logger(db)
+
     ftp_server = FTPServer(server_ip, db, logger)
 
     login_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -164,6 +183,11 @@ def main():
     login_socket.listen(5)
     # Without settimeout server wont be able to quit using ctrl-z
     login_socket.settimeout(0.1)
+
+    print 'Server is up and running!'
+    admin_thread = threading.Thread(target=handle_admin, args=(ftp_server.path_to_files,))
+    admin_thread.daemon = True  # Exit thread when program ends
+    admin_thread.start()
 
     while True:
         try:

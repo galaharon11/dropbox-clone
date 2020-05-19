@@ -190,3 +190,37 @@ def delete_group(server_db, group_name):
     except (lite.Error, TypeError) as e:
         print str(e)
         return False
+
+def get_all_users(server_db):
+    """
+    returns a list of touples of all users on server. [(user_name1, user_id1), (user_name2, user_id2)...].
+    """
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT username, user_id FROM users''')
+    return cursor.fetchall()
+
+def get_all_groups(server_db):
+    """
+    returns a list of touples of all groups on server. [(group_name1, group_id1), (group_name2, group_id2)...]
+    """
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT group_name, group_id FROM groups''')
+    return cursor.fetchall()
+
+def get_all_files(server_db):
+    """
+    returns a dict of all files pathes and their owner on server ({file_path: owner})
+    """
+    return_dict = {}
+    cursor = server_db.cursor()
+    cursor.execute('''SELECT file_path, file_id FROM files''')
+    files = cursor.fetchall()
+    for file_info in files:
+        file_id = str(file_info[1])
+        cursor.execute('''SELECT user_id FROM users_files WHERE file_id=? AND permissions=1''', (file_id,))
+        user_id = str(cursor.fetchone()[0])
+        # get owner
+        cursor.execute('''SELECT username FROM users WHERE user_id=?''', (user_id,))
+        return_dict[file_info[0]] = cursor.fetchone()[0]
+
+    return return_dict

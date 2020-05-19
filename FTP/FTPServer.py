@@ -69,9 +69,9 @@ class FTPServer(threading.Thread):
                 completion_queue.put_nowait(succes_code)
 
                 if operation == FTPDataOperations.get_file:
-                    self.logger.add_file_log('User {0} downloaded file in path {1}.', user_id, params[0])
+                    self.logger.add_file_log('User {0} downloaded a file in path {1}.', user_id, params[0])
                 elif operation == FTPDataOperations.append_file:
-                    self.logger.add_file_log('User {0} uploaded file to path {1}.', user_id, params[0])
+                    self.logger.add_file_log('User {0} uploaded a file to path {1}.', user_id, params[0])
 
             except FTPExceptions.FTPException as e:
                 try:
@@ -175,6 +175,7 @@ class FTPServer(threading.Thread):
 
         # Will map a session's id to user's id in the database
         self.sessions_id_to_user = {}
+
         self.path_to_files = 'files'
         if not os.path.exists(self.path_to_files):
             os.mkdir(self.path_to_files)

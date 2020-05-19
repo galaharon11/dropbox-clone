@@ -76,6 +76,15 @@ class ControlFrame(tk.Frame):
         self.upload_file_button.configure(state=state)
         self.add_dir_button.configure(state=state)
 
+    def parent_dir_btn_pressed(self):
+        # self.do_return_btn_action prevents the situation of user click return_button while
+        # ui_operations.change_dir_to_parent() is still working. This sitation can make bugs and
+        # make the program unusable.
+        if self.do_return_btn_action:
+            self.do_return_btn_action = False
+            self.ui_operations.change_dir_to_parent()
+            self.do_return_btn_action = True
+
     def __init__(self, parent, file_display, ui_operations):
         tk.Frame.__init__(self, parent)
 
@@ -97,9 +106,11 @@ class ControlFrame(tk.Frame):
         up_arrow_image = Image.open(os.path.join(os.path.dirname(__file__), 'icons', 'up.png')).convert('RGBA')
         up_arorw_icon = ImageTk.PhotoImage(up_arrow_image)
         self.return_button = tk.Button(self.addr_frame, image=up_arorw_icon,
-                                       command=self.ui_operations.change_dir_to_parent)
+                                       command=self.parent_dir_btn_pressed)
         self.return_button.image = up_arorw_icon
         self.return_button.pack(side='left', padx=(0, 10))
+        self.do_return_btn_action = True
+
         self.addr_frame.pack(side='top', expand=True, fill='both')
 
         self.operations_frame = tk.Frame(self)
