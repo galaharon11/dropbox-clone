@@ -56,9 +56,6 @@ class GenericAdminView(tk.Frame):
 
         self.logs_listbox.pack(side='top', fill='both', expand=True)
 
-        timesteps = tk.Listbox(listbox_wrap_frame, background='white', selectmode='single',
-                                  highlightthickness=0, activestyle='none')
-
         self.timestemp_listbox = tk.Listbox(listbox_wrap_frame, background='white', selectmode='single',
                                   highlightthickness=0, activestyle='none')
         for log in logs:

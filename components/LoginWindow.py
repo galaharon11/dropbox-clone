@@ -8,18 +8,29 @@ class LoginWindow(tk.Toplevel):
         self.destroy()
 
     def do_login(self, username, password):
-        login_str = ';'.join(['login', username, password])
-        self.login_server_socket.send(login_str)
-        error = self.login_server_socket.recv(1024)
-        if error != 'success':
-            tkMessageBox.showinfo('error', error)
-            self.focus_force()
-            self.username_entry.delete(0, 'end')
-            self.password_entry.delete(0, 'end')
+        try:
+            if len(username) < 4 or len(password) < 4:
+                tkMessageBox.showerror('Error', 'Username and password should contain at least 4 characters')
+                return
+            if not (username.isalnum() and password.isalnum()):
+                tkMessageBox.showerror('Error', 'Name and username should contain english letters and characters only')
+                return
 
-        else:
-            self.do_func_when_exit(username)
-            self.destroy()
+            login_str = ';'.join(['login', username, password])
+            self.login_server_socket.send(login_str)
+            error = self.login_server_socket.recv(1024)
+            if error != 'success':
+                tkMessageBox.showinfo('error', error)
+                self.focus_force()
+                self.username_entry.delete(0, 'end')
+                self.password_entry.delete(0, 'end')
+
+            else:
+                self.do_func_when_exit(username)
+                self.destroy()
+        except UnicodeEncodeError:
+            tkMessageBox.showerror('Error', 'Name and username should contain english letters and characters only')
+
 
     def __init__(self, parent, login_server_socket, do_func_when_exit):
         tk.Toplevel.__init__(self, parent)

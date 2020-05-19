@@ -8,19 +8,30 @@ class RegisterWindow(tk.Toplevel):
         self.destroy()
 
     def do_register(self, name, username, password):
-        register_str = ';'.join(['register', name, username, password])
-        self.login_server_socket.send(register_str)
-        error = self.login_server_socket.recv(1024)
-        if error != 'success':
+        try:
+            if len(username) < 4 or len(password) < 4:
+                tkMessageBox.showerror('Error', 'Username and password should contain at least 4 characters')
+                return
+            if not (username.isalnum() and password.isalnum() and name.isalnum()):
+                tkMessageBox.showerror('Error', 'Name, username and password should contain english letters and characters only')
+                return
 
-            tkMessageBox.showinfo('error', error)
-            self.focus_force()
-            self.username_entry.delete(0, 'end')
-            self.password_entry.delete(0, 'end')
+            register_str = ';'.join(['register', name, username, password])
+            self.login_server_socket.send(register_str)
+            error = self.login_server_socket.recv(1024)
+            if error != 'success':
 
-        else:
-            self.do_func_when_exit(username)
-            self.destroy()
+                tkMessageBox.showerror('Error', error)
+                self.focus_force()
+                self.username_entry.delete(0, 'end')
+                self.password_entry.delete(0, 'end')
+
+            else:
+                self.do_func_when_exit(username)
+                self.destroy()
+        except UnicodeEncodeError:
+            tkMessageBox.showerror('Error', 'Name, username and password should contain english letters and characters only')
+
 
     def __init__(self, parent, login_server_socket, do_func_when_exit):
         tk.Toplevel.__init__(self, parent)
