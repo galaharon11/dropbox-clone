@@ -1,9 +1,10 @@
-components/icons/*
-!components/icons/up.png
+/client/components/icons/*
+!client/components/icons/up.png
 clean.bat
 pylama.ini
 TODO
 *.db
-FTP/files/
+/server/files/
+/server/files/*
 .vscode/
-tmp/
+/client/tmp/
