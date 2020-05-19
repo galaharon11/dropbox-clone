@@ -43,9 +43,9 @@ def list_directory_by_path(server_path, session_id, control_sock, server_ip, gro
             raise IOError
 
 
-    files, dirs = data.decode('utf8').split(';;;')
-    files = filter(lambda name: name, files.split(','))
-    dirs = filter(lambda name: name, dirs.split(','))
+    files, dirs = data.decode('utf8').split('|||')
+    files = filter(lambda name: name, files.split('|'))
+    dirs = filter(lambda name: name, dirs.split('|'))
     data_sock.close()
     control_sock.recv(1024)
     return((files, dirs))

@@ -108,5 +108,5 @@ def list_files(params, user_id, path_to_files, data_socket, database):
     dirs_on_dir = map(lambda dir: os.path.basename(dir), dirs_on_dir)
     files_on_dir = map(lambda file: os.path.basename(file), files_on_dir)
 
-    data_socket.send(';;;'.join([','.join(files_on_dir), ','.join(dirs_on_dir)]).encode('utf8'))
+    data_socket.send('|||'.join(['|'.join(files_on_dir), '|'.join(dirs_on_dir)]).encode('utf8'))
     return "212 Directory sent Ok."
