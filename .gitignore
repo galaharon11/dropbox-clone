@@ -4,6 +4,6 @@ clean.bat
 pylama.ini
 TODO
 *.db
-server/files/
+/server/files/
 .vscode/
 /client/tmp/
