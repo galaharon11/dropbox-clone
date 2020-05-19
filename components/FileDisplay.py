@@ -124,7 +124,6 @@ class FileDisplay(tk.Canvas):
     def download_next_file_if_last_finished(self, path_on_client, names):
         if self.ui_operations.download_completed:
             file_name = names.pop()
-            print 'path_to_file', os.path.join(path_on_client, file_name)
             self.ui_operations.download_from_current_server_path(file_name,
                                os.path.join(path_on_client, file_name), show_message_box=False)
         if names:
@@ -133,18 +132,16 @@ class FileDisplay(tk.Canvas):
                                   self.download_next_file_if_last_finished(path_on_client, names))
 
     def download_dir(self, path_on_client, dir_name):
-        print path_on_client, dir_name
         os.mkdir(os.path.join(path_on_client, dir_name))
         dirs, files = self.ui_operations.recursive_list(dir_name)
-        print path_on_client, dirs, files
         for d in dirs:
             d = d[1:]
-            print 'd', os.path.join(path_on_client, d)
             os.makedirs(os.path.join(path_on_client, d))
         if files:
             # Remove file's prefix. /a/b/c -> a/b/c
             files = map(lambda f: f[1:], files)
             return files
+        return []
 
     def download_marked_files(self):
         if len(self.marked_labels) > 1:
@@ -154,7 +151,7 @@ class FileDisplay(tk.Canvas):
                                         path_to_dir ,label.file_name)), self.marked_labels)
                 if ignored_files:
                     ignored_files_string = ', '.join(map(lambda label: label.file_name , ignored_files))
-                    tkMessageBox.showwarning(title='Warning', message='This directory already contain a file(s) '
+                    tkMessageBox.showwarning(title='Warning', message=u'This directory already contain a file(s) '
                     'with the name(s) {0}. The program will not download those file(s)'.format(ignored_files_string))
 
                 labels = list(set(self.marked_labels) - set(ignored_files))

@@ -7,7 +7,6 @@ import FTPDatabaseOperations
 def recieve_file(abs_file_path, data_socket):
     file = None
     try:
-        print abs_file_path
         if os.path.exists(abs_file_path):
             raise FTPExceptions.FileAlreadyExists
 
@@ -30,18 +29,15 @@ def recieve_file(abs_file_path, data_socket):
 def send_file(abs_file_path, data_socket):
     file = None
     try:
-        print abs_file_path
         if not os.path.exists(abs_file_path):
             raise IOError
 
         file = open(abs_file_path, 'rb')
         while True:
             file_data = file.read()
-            print 'packet'
             if file_data:
                 data_socket.send(file_data)
             else:
-                print 'closing file'
                 file.close()
                 data_socket.close()
                 return abs_file_path
