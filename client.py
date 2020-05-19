@@ -17,7 +17,7 @@ entry_on_focus = None
 control_frame = None
 login_server_addr = ("10.100.102.15", 10054)
 ftp_control_addr = ("10.100.102.15", 21)
-
+login_window = None
 
 def close_program(files_window):
     files_window.destroy()
@@ -47,6 +47,10 @@ def unfocus_entries(event):
 
 def spawn_login_frame(is_register_window=False):
     global login_window
+    if login_window:
+        if login_window.winfo_exists():
+            return
+
     if(is_register_window):
         login_window = RegisterWindow(welcome_window, login_sock, create_main_window)
     else:
