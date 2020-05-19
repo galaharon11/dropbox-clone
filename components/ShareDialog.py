@@ -8,7 +8,7 @@ from PermissionsConsts import *
 class ShareDialog(tk.Toplevel):
     def button_pressed(self):
         if self.nameEntry.get() == self.ui_operations.user_name:
-            tkMessageBox.showerror(title='Error', message='You cannot a file to yourself')
+            tkMessageBox.showerror(title='Error', message='You cannot share a file to yourself')
             return
         permissions = self.permission_download_var.get() | self.permission_delete_var.get() |  \
             self.permission_rename_var.get() | self.permission_edit_var.get() | self.permission_share_var.get()

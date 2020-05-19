@@ -39,7 +39,6 @@ def handle_connection(sock, addr, ftp_server, logger):
                 sock.close()
                 return
             if data.startswith("login;"):
-                # TODO: User cant use ; on username
                 data = data.split(';')
                 if len(data) != 3:
                     raise ValueError
@@ -48,7 +47,6 @@ def handle_connection(sock, addr, ftp_server, logger):
                 register = False
 
             elif data.startswith("register;"):
-                # TODO: User cant use ; on username
                 data = data.split(';')
                 if len(data) != 4:
                     raise ValueError

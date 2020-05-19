@@ -3,6 +3,7 @@ import tkFont
 import os
 import sys
 import socket
+import tkMessageBox
 
 from components.FileDisplay import FileDisplay
 from components.ControlFrame import ControlFrame
@@ -15,6 +16,7 @@ is_ctrl_pressed = True
 files_window = None
 entry_on_focus = None
 control_frame = None
+welcome_window = None
 login_server_addr = ("10.100.102.15", 10054)
 ftp_control_addr = ("10.100.102.15", 21)
 login_window = None
@@ -107,13 +109,13 @@ def create_main_window(user_name):
 def main():
     global welcome_window, login_sock
 
+    login_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    login_sock.connect(login_server_addr)
+
     welcome_window = tk.Tk()
     welcome_window.geometry("+200+100")
     welcome_window.resizable(False, False)
     welcome_window.title('Welcome')
-
-    login_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    login_sock.connect(login_server_addr)
 
     widgets_font = tkFont.Font(family="TkTextFont", size=20)
     login_button = tk.Button(welcome_window, text="Login", font=widgets_font,
@@ -129,4 +131,17 @@ def main():
 if __name__ == '__main__':
     # This line allows modules to import python files within the program
     sys.path.append(os.path.dirname(sys.path[0]))
-    main()
+    try:
+        main()
+    except socket.error:
+        if not (welcome_window or files_window):
+            # If Tk hasn't been called yet, an empty Tk windows will automatically apear when the program
+            # calls tkMessageBox. Creating a root and then immidiately hiding it will disable this behavoir.
+            root = tk.Tk()
+            root.withdraw()
+        try:
+            tkMessageBox.showerror('Server disconnected', 'The server is not active. Please make sure the server is '
+                                                          'running and try again')
+        except KeyboardInterrupt:
+            pass
+        exit()

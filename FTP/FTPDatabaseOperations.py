@@ -159,10 +159,18 @@ def get_users_in_group(server_db, group_name):
     cursor = server_db.cursor()
     cursor.execute('''SELECT group_id FROM groups WHERE group_name=?''', (group_name,))
     group_id = int(cursor.fetchone()[0])
-    cursor.execute('''SELECT user_id FROM users_groups WHERE group_id=?''', (group_id,))
-    users_ids = map(lambda x: str(x[0]), cursor.fetchall())
-    cursor.execute('''SELECT username FROM users WHERE user_id IN ({0})'''.format(','.join(users_ids)))
-    return map(lambda x: x[0], cursor.fetchall())
+    cursor.execute('''SELECT user_id FROM users_groups WHERE group_id=? ORDER BY ROWID''', (group_id,))
+    users_ids = map(lambda x: x[0], cursor.fetchall())
+    users_ids_str = map(lambda x: str(x), users_ids)
+    cursor.execute('''SELECT username, user_id FROM users WHERE user_id IN ({0})'''.format(','.join(users_ids_str)))
+    ret_list = []
+    queries = cursor.fetchall()
+    for u_id in users_ids:
+        for user in queries:
+            if user[1] == u_id:
+                ret_list.append(user[0])
+
+    return ret_list
 
 def remove_user_from_group(server_db, group_name, user_name):
     try:

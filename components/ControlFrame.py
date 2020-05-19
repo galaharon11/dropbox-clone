@@ -2,6 +2,7 @@ import Tkinter as tk
 import tkSimpleDialog
 from PIL import Image, ImageTk
 import os
+import tkMessageBox
 
 from ManageGroupWindow import ManageGroupWindow
 
@@ -49,7 +50,10 @@ class ControlFrame(tk.Frame):
         dir_name = tkSimpleDialog.askstring('Add a directory',
                              'Please enter the name of the directory you want to add', parent=self.parent)
         if dir_name:
-            self.ui_operations.add_directory_from_current_directory(dir_name)
+            if self.ui_operations.filter_file_name(dir_name):
+                self.ui_operations.add_directory_from_current_directory(dir_name)
+            else:
+                tkMessageBox.showerror('Error', 'Your files contains illegal characters')
 
     def manage_group(self):
         ManageGroupWindow(self.parent, self.ui_operations)

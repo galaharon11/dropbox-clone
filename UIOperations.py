@@ -3,6 +3,7 @@ import os
 import threading
 import Queue
 import time
+import socket
 
 from internet_operations import upload_file, download_file, list_dir
 from components.ProgressBar import ProgressBar
@@ -52,12 +53,17 @@ class UIOperations(object):
         Sends a command to the ftp server.
         returns the error string received from the server after sending the command.
         """
-        if self.current_group and not is_group_command:
-            # Group commands does not accept group parameter.
-            params = params + (self.current_group,)
-        command = ' '.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
-        self.ftp_control_sock.send(command.encode('utf8'))
-        return self.ftp_control_sock.recv(1024)
+        try:
+            if self.current_group and not is_group_command:
+                # Group commands does not accept group parameter.
+                params = params + (self.current_group,)
+            command = '|'.join([command_name] + list(params) + ['SESSIONID=' + str(self.session_id)])
+            self.ftp_control_sock.send(command.encode('utf8'))
+            return self.ftp_control_sock.recv(1024)
+        except socket.error:
+            tkMessageBox.showerror('Server disconnected', 'The server was terminated. Please make sure the server is '
+                                                            'running and try again')
+            exit()
 
     def destroy_progressbar(self, error_msg, show_message_box=True, refresh_when_finish=True):
         mode = self.progress_bar.mode
@@ -71,11 +77,12 @@ class UIOperations(object):
                 self.do_func_when_finish()
                 self.do_func_when_finish = None
         elif error_msg.startswith('550'):
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to {0} this file'.format(mode))
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to {0} this file or the '
+                                                'file/directory were deleted from the server by another user.'.format(mode))
         elif error_msg.startswith('505'):
             tkMessageBox.showerror(title='Error', message='The file you tried to upload already exists on that directry. '
                                                           'Please delete the file on server, change its name or upload'
-                                                          'the file on a different directory')
+                                                          'the file on a different directory.')
 
     def check_if_thread_finished(self, show_message_box, refresh_when_finish=True):
         if not self.msg_queue.empty():
@@ -149,7 +156,8 @@ class UIOperations(object):
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file.')
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to delete this file  or the '
+                                                'file/directory were deleted from the server by another user.')
 
     def change_directory(self, directory):
         self.current_server_path = os.path.join(self.current_server_path, directory)
@@ -161,12 +169,13 @@ class UIOperations(object):
             self.refresh()
 
     def rename_file_in_current_path(self, file_name, new_file_name):
-        error_msg = self.send_command(False, 'RNTO', os.path.join(self.current_server_path, file_name),
-                                              os.path.join(self.current_server_path, new_file_name))
+        error_msg = self.send_command(False, 'RNTO', os.path.join(self.current_server_path,
+                                                         file_name), new_file_name)
         if error_msg.startswith('2'):  # 2xx errno is success
             self.refresh()
         elif error_msg.startswith('550'): # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to rename this file.')
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to rename this file. or the '
+                                                'file/directory were deleted from the server by another user')
         elif error_msg.startswith('505'): # 550 is permission denied
             tkMessageBox.showerror(title='Error', message='There is already a file or directory with the same name you entered on this '
                                                           'directory. Please enter a different name.')
@@ -213,7 +222,8 @@ class UIOperations(object):
             self.refresh()
             return True  # success
         elif error_msg.startswith('550'):  # 550 is permission denied
-            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to share this file.')
+            tkMessageBox.showerror(title='Error', message='You don\'t have the permission to share this file. or the '
+                                                'file/directory were deleted from the server by another user')
         else:
             tkMessageBox.showerror(title='Error', message='User {0} does not exists.'.format(user_name))
 
@@ -268,6 +278,7 @@ class UIOperations(object):
 
     def get_users_in_group(self, group_name):
         msg = self.send_command(True, 'GROUP', 'LIST', group_name)
+        print 'msg', msg
         if msg.startswith('2'):
             if len(msg) == 3:
                 return []
@@ -275,3 +286,13 @@ class UIOperations(object):
                 return msg[4:].split(',')
             else:
                 return [msg[4:]]
+
+    def filter_file_name(self, string):
+        """
+        Return True if this file name is valid on windows file system
+        """
+        filter_lst = ['\\', '/', '|', '?', '"', ':', '>', '<', '*']
+        for l in filter_lst:
+            if l in string:
+                return False
+        return True

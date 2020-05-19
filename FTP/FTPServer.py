@@ -61,9 +61,9 @@ class FTPServer(threading.Thread):
                 pass
 
             command = command_queue.get_nowait()
-            operation = data_fucntions[command[:command.find(' ')]]
+            operation = data_fucntions[command[:command.find('|')]]
             user_id = int(command[command.find('USERID=') + 7:])
-            params = command[command.find(' ') + 1: command.find(' USERID=')].split(' ')
+            params = command[command.find('|') + 1: command.find('|USERID=')].split('|')
             try:
                 succes_code = operation(params, user_id, self.path_to_files, data_socket, self.server_db)
                 completion_queue.put_nowait(succes_code)
@@ -98,6 +98,7 @@ class FTPServer(threading.Thread):
         while True:
             try:
                 command = control_sock.recv(1024).decode('utf8')
+                print command
                 if command == 'PASV':
                     # Create a command queue to 'share' data between control thread (this thread) to the data thread
                     command_queue = Queue()
@@ -121,8 +122,9 @@ class FTPServer(threading.Thread):
                 if not os.path.exists(dir_path):
                     os.mkdir(dir_path)
 
-                operation = control_fucntions[command[:command.find(' ')]]
-                params = command[command.find(' ') + 1: command.find(' SESSIONID=')].split(' ')
+                operation = control_fucntions[command[:command.find('|')]]
+                params = command[command.find('|') + 1: command.find('|SESSIONID=')].split('|')
+                print params
                 operation(params, user_id, self.path_to_files, self.server_db, command_queue, completion_queue)
 
                 if operation == FTPControlOperations.group_operations:

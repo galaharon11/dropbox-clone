@@ -5,8 +5,10 @@ import threading
 import random
 import string
 import tkSimpleDialog
+import tkMessageBox
 
 from ShareDialog import ShareDialog
+
 
 class FileLabel(tk.Label):
     ICON_SIZE = 82
@@ -20,7 +22,10 @@ class FileLabel(tk.Label):
         new_name = tkSimpleDialog.askstring('Rename this file',
                              'Please enter the new name of this file', parent=self.file_view_parent)
         if new_name:
-            self.ui_operations.rename_file_in_current_path(self.file_name, new_name)
+            if self.ui_operations.filter_file_name(new_name):
+                self.ui_operations.rename_file_in_current_path(self.file_name, new_name)
+            else:
+                tkMessageBox.showerror('Error', 'Your files contains illegal characters')
 
     def start_file(self, tmp_file_path):
         try:

@@ -23,10 +23,10 @@ def upload_file_by_path(file_path, server_path, control_sock, session_id, server
     data_sock = passive_connect(control_sock, server_ip)
     data_sock.settimeout(0.1)
     if group:
-        control_sock.send(' '.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
+        control_sock.send('|'.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
                                     group, 'SESSIONID=' + str(session_id)]).encode('utf8'))
     else:
-        control_sock.send(' '.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
+        control_sock.send('|'.join(['APPE', os.path.join(server_path, os.path.basename(file_path)),
                                     'SESSIONID=' + str(session_id)]).encode('utf8'))
 
     err_msg = ''

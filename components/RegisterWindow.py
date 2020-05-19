@@ -1,6 +1,7 @@
 import Tkinter as tk
 import tkFont
 import tkMessageBox
+import socket
 
 
 class RegisterWindow(tk.Toplevel):
@@ -31,7 +32,10 @@ class RegisterWindow(tk.Toplevel):
                 self.destroy()
         except UnicodeEncodeError:
             tkMessageBox.showerror('Error', 'Name, username and password should contain english letters and characters only')
-
+        except socket.error:
+            tkMessageBox.showerror('Server disconnected', 'The server was terminated. Please make sure the server is '
+                                                            'running and try again')
+            exit()
 
     def __init__(self, parent, login_server_socket, do_func_when_exit):
         tk.Toplevel.__init__(self, parent)

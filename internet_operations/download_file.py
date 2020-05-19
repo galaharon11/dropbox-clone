@@ -28,9 +28,9 @@ def download_file_by_path(server_path, path_to_store_file, control_sock, session
     data_sock.settimeout(0.1)
 
     if group:
-        control_sock.send(' '.join(['GET', server_path, group, 'SESSIONID=' + str(session_id)]).encode('utf8'))
+        control_sock.send('|'.join(['GET', server_path, group, 'SESSIONID=' + str(session_id)]).encode('utf8'))
     else:
-        control_sock.send(' '.join(['GET', server_path, 'SESSIONID=' + str(session_id)]).encode('utf8'))
+        control_sock.send('|'.join(['GET', server_path, 'SESSIONID=' + str(session_id)]).encode('utf8'))
 
     byte_counter = 0
     err_msg = ''

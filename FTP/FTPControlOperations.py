@@ -54,9 +54,9 @@ def append_file(params, user_id, path_to_files, server_db, command_queue, comple
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, 0, path_to_files)
     if group:
-        command_queue.put_nowait(' '.join(['APPE', abs_path, group, 'USERID=' + str(user_id)]))
+        command_queue.put_nowait('|'.join(['APPE', abs_path, group, 'USERID=' + str(user_id)]))
     else:
-        command_queue.put_nowait(' '.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
+        command_queue.put_nowait('|'.join(['APPE', abs_path, 'USERID=' + str(user_id)]))
 
 
 def get_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
@@ -73,9 +73,9 @@ def get_file(params, user_id, path_to_files, server_db, command_queue, completio
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, DOWNLOAD, path_to_files)
     if group:
-        command_queue.put_nowait(' '.join(['GET', abs_path, group, 'USERID=' + str(user_id)]))
+        command_queue.put_nowait('|'.join(['GET', abs_path, group, 'USERID=' + str(user_id)]))
     else:
-        command_queue.put_nowait(' '.join(['GET', abs_path, 'USERID=' + str(user_id)]))
+        command_queue.put_nowait('|'.join(['GET', abs_path, 'USERID=' + str(user_id)]))
 
 
 
@@ -87,7 +87,7 @@ def list_files(params, user_id, path_to_files, server_db, command_queue, complet
     he is not their owner (the files shared with the user)
     LIST stntax: LIST dir_path group(optional) SESSIONID=sessionid
     """
-    command_queue.put_nowait(' '.join(['LIST'] + params + ['USERID=' + str(user_id)]))
+    command_queue.put_nowait('|'.join(['LIST'] + params + ['USERID=' + str(user_id)]))
 
 
 def delete_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
@@ -116,19 +116,20 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, comple
     On standart ftp servers, to rename a file the client must enter RNFR command
     and RNTO command right after it. On this implementation, the client need to
     enter only RNTO command with 2 parameters.
-    RNTO syntax: RNTO path_to_file path_to_new_file group(optional) SESSIONID=sessionid
-    Example: RNTO \a\b\before.txt \a\b\after.txt
+    RNTO syntax: RNTO path_to_file new_file_name group(optional) SESSIONID=sessionid
+    Example: RNTO \a\b\before.txt after.txt
     """
     if len(params) == 3:
-        relative_path, new_path, group = params
+        relative_path, new_name, group = params
     else:
-        relative_path, new_path = params
+        relative_path, new_name = params
         group = ''
 
     abs_path = get_file_from_group_and_check_permission(group, relative_path, server_db,
                                                         user_id, RENAME, path_to_files)
 
-    new_abs_path = os.path.join(path_to_files, str(user_id), new_path[1:])
+    new_abs_path = os.path.join(os.path.dirname(abs_path), new_name)
+    #new_abs_path = os.path.join(path_to_files, str(user_id), new_path[1:])
     if os.path.exists(abs_path):
         if not os.path.exists(new_abs_path):
             FTPDatabaseOperations.change_file_path_on_db(server_db, abs_path, new_abs_path)

@@ -211,7 +211,11 @@ class FileDisplay(tk.Canvas):
         self.marked_labels = []
         self._num_of_files = 0
 
-        file_names, dir_names = self.ui_operations.list_files_in_current_dir()
+        answer = self.ui_operations.list_files_in_current_dir()
+        if not answer:
+            tkMessageBox.showerror('Error', 'You are no longer part of this group.')
+            self.ui_operations.refresh(change_to_my_files=True)
+        file_names, dir_names = answer
         self._add_file_labels(file_names, dir_names)
         self.currently_on_screen = self.dir_labels + self.file_labels
 

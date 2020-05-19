@@ -25,6 +25,7 @@ class ManageGroupWindow(tk.Toplevel):
             user = self.names_listbox.get(tk.ACTIVE)
             if user == self.ui_operations.user_name:
                 answer = tkMessageBox.showerror('Error', 'You cannot remove yourself from the group.')
+                return
             answer = tkMessageBox.askyesno('Are you sure?', 'Are you sure that you want to remove user '
                                                            '{0} from the group {1}?'.format(user, self.group_name))
             if answer:
@@ -33,6 +34,7 @@ class ManageGroupWindow(tk.Toplevel):
 
     def refresh(self):
         self.users = self.ui_operations.get_users_in_group(self.group_name)
+        print self.users
         self.names_listbox.delete(0, 'end')
         for user in self.users:
             self.names_listbox.insert('end', user)
@@ -45,6 +47,7 @@ class ManageGroupWindow(tk.Toplevel):
         self.group_name = self.ui_operations.current_group
 
         self.users = self.ui_operations.get_users_in_group(self.group_name)
+        print self.users
         self.is_owner = self.ui_operations.user_name == self.users[0]
 
         default_font = tkFont.nametofont("TkTextFont")
