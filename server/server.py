@@ -8,7 +8,7 @@ from logger.Logger import Logger
 from admin.AdminWindow import AdminWindow
 
 
-server_ip = "10.100.102.15"
+server_ip = '127.0.0.1'
 PORT = 10054
 sessions_id_list = {}
 db = None

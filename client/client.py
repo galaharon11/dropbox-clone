@@ -17,8 +17,8 @@ files_window = None
 entry_on_focus = None
 control_frame = None
 welcome_window = None
-login_server_addr = ("10.100.102.15", 10054)
-ftp_control_addr = ("10.100.102.15", 21)
+login_server_addr = ('127.0.0.1', 10054)
+ftp_control_addr = ('127.0.0.1', 21)
 login_window = None
 
 def close_program(files_window):
@@ -53,7 +53,7 @@ def spawn_login_frame(is_register_window=False):
         if login_window.winfo_exists():
             return
 
-    if(is_register_window):
+    if is_register_window:
         login_window = RegisterWindow(welcome_window, login_sock, create_main_window)
     else:
         login_window = LoginWindow(welcome_window, login_sock, create_main_window)
@@ -124,9 +124,10 @@ def main():
                                 command=lambda: spawn_login_frame(True))
     login_button.pack(pady=10, padx=10)
     register_button.pack(pady=10, padx=10)
-
-    welcome_window.mainloop()
-
+    try:
+        welcome_window.mainloop()
+    except KeyboardInterrupt:
+        exit()
 
 if __name__ == '__main__':
     # This line allows modules to import python files within the program
