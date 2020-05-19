@@ -278,7 +278,6 @@ class UIOperations(object):
 
     def get_users_in_group(self, group_name):
         msg = self.send_command(True, 'GROUP', 'LIST', group_name)
-        print 'msg', msg
         if msg.startswith('2'):
             if len(msg) == 3:
                 return []

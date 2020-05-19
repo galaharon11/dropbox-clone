@@ -104,7 +104,6 @@ def create_group(server_db, group_name, group_password, user_id):
         cursor.execute('''INSERT INTO users_groups VALUES (?, ?, ?)''', (user_id, group_id, OWNER))
         server_db.commit()
     except lite.IntegrityError as e:
-        print str(e)
         return False
     return True
 
@@ -196,7 +195,6 @@ def delete_group(server_db, group_name):
         server_db.commit()
         return True
     except (lite.Error, TypeError) as e:
-        print str(e)
         return False
 
 def get_all_users(server_db):

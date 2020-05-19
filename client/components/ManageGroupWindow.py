@@ -34,7 +34,6 @@ class ManageGroupWindow(tk.Toplevel):
 
     def refresh(self):
         self.users = self.ui_operations.get_users_in_group(self.group_name)
-        print self.users
         self.names_listbox.delete(0, 'end')
         for user in self.users:
             self.names_listbox.insert('end', user)
@@ -47,7 +46,6 @@ class ManageGroupWindow(tk.Toplevel):
         self.group_name = self.ui_operations.current_group
 
         self.users = self.ui_operations.get_users_in_group(self.group_name)
-        print self.users
         self.is_owner = self.ui_operations.user_name == self.users[0]
 
         default_font = tkFont.nametofont("TkTextFont")
