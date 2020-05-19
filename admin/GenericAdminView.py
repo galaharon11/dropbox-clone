@@ -149,7 +149,7 @@ class GenericAdminView(tk.Frame):
             show_log_btn = tk.Button(self, text='Show {0} logs'.format(view), width=15)
             show_log_btn.pack(side='right', padx=10)
         else:
-            show_log_btn = tk.Button(self, text='Show error logs', width=15)
+            show_log_btn = tk.Button(self, text='Show error logs', width=15, highlightthickness=0)
             show_log_btn.pack(side='top', padx=10, pady=10)
             self.focus_set()
 
