@@ -18,7 +18,7 @@ entry_on_focus = None
 control_frame = None
 welcome_window = None
 login_server_addr = ('127.0.0.1', 10054)
-ftp_control_addr = ('127.0.0.1', 21)
+ftp_control_addr = (login_server_addr[0], 21)
 login_window = None
 
 def close_program(files_window):
