@@ -125,7 +125,6 @@ class FTPServer(threading.Thread):
                 operation = control_fucntions[command[:command.find('|')]]
                 params = command[command.find('|') + 1: command.find('|SESSIONID=')].split('|')
                 operation(params, user_id, self.path_to_files, self.server_db, command_queue, completion_queue)
-
                 if operation == FTPControlOperations.group_operations:
                     if params[0] == 'CREATE':
                         self.logger.add_group_log('Group {0} created.', params[1])

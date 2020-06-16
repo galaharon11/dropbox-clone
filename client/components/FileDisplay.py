@@ -66,7 +66,7 @@ class FileDisplay(tk.Canvas):
 
             return images
         except:
-            traceback.print_exc()
+            pass
 
     def filter_display(self, file_names, dir_names=[]):
         for x in self.currently_on_screen:

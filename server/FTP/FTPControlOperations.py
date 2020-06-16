@@ -44,7 +44,7 @@ def get_file_from_group_and_check_permission(group, relative_path, server_db, us
 def append_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Add a file to the FTP server.
-    command syntax: APPE file_path_on_server SESSIONID=sessionid
+    command syntax: APPE|file_path_on_server|SESSIONID=sessionid
     """
     if len(params) == 2:
         relative_path, group = params
@@ -63,7 +63,7 @@ def get_file(params, user_id, path_to_files, server_db, command_queue, completio
     """
     Get a file from FTP server. if group is specified with GET, GET will get
     a file associated to a the specied group.
-    command syntax: GET file_path_on_server group(optional) SESSIONID=sessionid
+    command syntax: GET|file_path_on_server|group(optional)|SESSIONID=sessionid
     """
     if len(params) == 2:
         relative_path, group = params
@@ -85,7 +85,7 @@ def list_files(params, user_id, path_to_files, server_db, command_queue, complet
     that the server should list files shared by this group. group parameter can be specified
     to "SHARED", this will tell the server to include files associated with the user, that
     he is not their owner (the files shared with the user)
-    LIST stntax: LIST dir_path group(optional) SESSIONID=sessionid
+    LIST stntax: LIST|dir_path|group(optional)|SESSIONID=sessionid
     """
     command_queue.put_nowait('|'.join(['LIST'] + params + ['USERID=' + str(user_id)]))
 
@@ -93,7 +93,7 @@ def list_files(params, user_id, path_to_files, server_db, command_queue, complet
 def delete_file(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Delete a file on server.
-    DELE stntax: DELE file_name group(optional) SESSIONID=sessionid
+    DELE stntax: DELE|file_name|group(optional)|SESSIONID=sessionid
     """
     if len(params) == 2:
         relative_path, group = params
@@ -117,7 +117,7 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, comple
     and RNTO command right after it. On this implementation, the client need to
     enter only RNTO command with 2 parameters.
     RNTO syntax: RNTO path_to_file new_file_name group(optional) SESSIONID=sessionid
-    Example: RNTO \a\b\before.txt after.txt
+    Example: RNTO|\a\b\before.txt|after.txt
     """
     if len(params) == 3:
         relative_path, new_name, group = params
@@ -143,7 +143,7 @@ def rename_file(params, user_id, path_to_files, server_db, command_queue, comple
 def mkdir(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Create a directory in the server.
-    MKD stntax: MKD dir_path group(optional) SESSIONID=sessionid
+    MKD stntax: MKD|dir_path|group(optional)|SESSIONID=sessionid
     """
     if len(params) == 2:
         relative_path, group = params
@@ -163,7 +163,7 @@ def mkdir(params, user_id, path_to_files, server_db, command_queue, completion_q
 def rmdir(params, user_id, path_to_files, server_db, command_queue, completion_queue):
     """
     Remove a directory on server
-    RMD stntax: RMD dir_path group(optional) SESSIONID=sessionid
+    RMD stntax: RMD|dir_path|group(optional)|SESSIONID=sessionid
     """
     if len(params) == 2:
         relative_path, group = params
@@ -191,7 +191,7 @@ def share_file(params, user_id, path_to_files, server_db, command_queue, complet
     other user, specified by user_name param. permissions argument will indicate the
     permissions the shared user will have on this file. permissions is a number formatted with flags
     according to the flags written on permission_doc.txt file.
-    SHAR syntax: SHAR path_to_file user_name permissions group(optional) SESSIONID=sessionid
+    SHAR syntax: SHAR|path_to_file|user_name|permissions|group(optional) SESSIONID=sessionid
     """
     if len(params) == 4:
         relative_path, user_name, permissions, group = params
@@ -218,30 +218,30 @@ def group_operations(params, user_id, path_to_files, server_db, command_queue, c
     GROUP GET:
     The command will tell the server to return all the groups that the user
     is in them. The server will reply with "211 group_name1,group_name2,group_name3..."
-    GROUP GET syntax: GROUP GET SESSIONID=sessionid
+    GROUP GET syntax: GROUP|GET|SESSIONID=sessionid
 
     GROUP JOIN:
     The command will tell the server to connect the user to a group.
-    GROUP JOIN syntax: GROUP JOIN group_name group_password SESSIONID=sessionid
+    GROUP JOIN syntax: GROUP|JOIN|group_name|group_password|SESSIONID=sessionid
 
     GROUP CREATE:
     The command will tell the server to create a new group, and connect the user to this group with
     OWNER permissions.
-    GROUP JOIN syntax: GROUP CREATE group_name group_password SESSIONID=sessionid
+    GROUP JOIN syntax: GROUP|CREATE|group_name|group_password SESSIONID=sessionid
 
     GROUP LIST:
     The command will tell the server to return all the users of a given group. The server
     will reply with "211 username1,username2,username3...". The first username is always the username of
     the owner of this group.
-    GROUP LIST syntax: GROUP LIST group_name SESSIONID=sessionid
+    GROUP LIST syntax: GROUP|LIST|group_name|SESSIONID=sessionid
 
     GROUP DELETE:
     The command will tell the server to delete the given group.
-    GROUP DELETE syntax: GROUP DELETE group_name SESSIONID=sessionid
+    GROUP DELETE syntax: GROUP|DELETE|group_name|SESSIONID=sessionid
 
     GROUP REMOVE:
     The command will tell the server to remove the given user from the given group.
-    GROUP REMOVE syntax: GROUP REMOVE group_name username SESSIONID=sessionid
+    GROUP REMOVE syntax: GROUP|REMOVE|group_name|username|SESSIONID=sessionid
     """
 
     operations = {'GET':GroupOperations.group_get,

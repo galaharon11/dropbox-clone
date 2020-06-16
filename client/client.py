@@ -102,8 +102,10 @@ def create_main_window(user_name):
 
     welcome_window.withdraw()
     login_window.withdraw()
-
-    files_window.mainloop()
+    try:
+        files_window.mainloop()
+    except KeyboardInterrupt:
+        exit()
 
 
 def main():
