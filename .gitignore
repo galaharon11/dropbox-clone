@@ -1,4 +1,3 @@
-.gitignore
 /client/components/icons/*
 !client/components/icons/up.png
 clean.bat
