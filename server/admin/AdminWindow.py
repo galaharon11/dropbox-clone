@@ -22,5 +22,7 @@ class AdminWindow(tk.Tk):
         tabs.add(GenericAdminView(self, 'error', server_db, logger, path_to_files), text='Errors')
         tabs.add(ResetView(self, server_db, path_to_files), text='Reset server')
         tabs.pack(fill='both', expand=True)
-
-        self.mainloop()
+        try:
+            self.mainloop()
+        except KeyboardInterrupt:
+            exit()

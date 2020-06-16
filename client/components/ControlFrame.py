@@ -9,8 +9,10 @@ from ManageGroupWindow import ManageGroupWindow
 
 class ControlFrame(tk.Frame):
     def set_path(self, path):
+        self.address_bar.configure(state='normal')
         self.address_bar.delete(0, 'end')
         self.address_bar.insert(0, path)
+        self.address_bar.configure(state='disabled')
 
     def set_search_text(self):
         if self.search_bar.get() == '':
@@ -103,8 +105,9 @@ class ControlFrame(tk.Frame):
         self.search_bar.bind("<Button-1>", lambda event: self.search_entry_pressed())
         self.search_bar.bind("<Key>", lambda event: self.search_typed(event))
 
-        self.address_bar = tk.Entry(self.addr_frame)
+        self.address_bar = tk.Entry(self.addr_frame, disabledbackground='white', disabledforeground='black')
         self.address_bar.insert(0, '/')
+        self.address_bar.configure(state='disabled')
         self.address_bar.pack(side='right', expand=True, fill='both', ipady=3, ipadx=3)
 
         up_arrow_image = Image.open(os.path.join(os.path.dirname(__file__), 'icons', 'up.png')).convert('RGBA')

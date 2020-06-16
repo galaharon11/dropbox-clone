@@ -83,7 +83,6 @@ def handle_connection(sock, addr, ftp_server, logger):
         except AttributeError as e:
             sock.send('Username or password are incorrect')
         except ValueError, sqlite.Error:
-            print 'Unexpected error'
             logger.add_error_log('Unexpected error.')
             sock.send('Unexpected error')
         except socket.error as e:

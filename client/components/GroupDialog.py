@@ -6,10 +6,13 @@ class GroupDialog(tk.Toplevel):
     def action(self):
         group_name = self.name_entry.get()
         group_pass = self.password_entry.get()
-        if(not (group_name.isalnum() and group_pass.isalnum() \
-             and all(ord(c) < 128 for c in group_name+group_pass))):
-            tkMessageBox.showerror(title='Error', message='Group name and password '
-                                                         'must contain english letters and numbers only')
+        is_valid = self.ui_operations.filter_file_name(group_pass)
+        is_valid &= self.ui_operations.filter_file_name(group_name)
+        is_valid &= all(ord(c) < 128 for c in group_name+group_pass)
+        is_valid &= ',' not in group_name and ',' not in group_pass
+        if not is_valid:
+            tkMessageBox.showerror(title='Error', message='Group name or password '
+                                                          'contains illegal characters')
             return
 
         if group_name and group_pass:
